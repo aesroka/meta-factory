@@ -111,7 +111,11 @@ class BrownfieldSwarm(BaseSwarm):
 
     def _run_legacy_analysis(self, input_data: BrownfieldInput) -> LegacyAnalysisResult:
         """Run the legacy analysis stage."""
-        agent = LegacyAgent(librarian=self.librarian)
+        agent = LegacyAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = LegacyInput(
             codebase_description=input_data.codebase_description,
             code_samples=input_data.code_samples,
@@ -181,7 +185,11 @@ class BrownfieldSwarm(BaseSwarm):
         pain_matrix: PainMonetizationMatrix,
     ) -> ArchitectureResult:
         """Run the refactoring planning stage."""
-        agent = ArchitectAgent(librarian=self.librarian)
+        agent = ArchitectAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = ArchitectInput(
             pain_matrix=pain_matrix,
             constraints=legacy.constraints,
@@ -202,7 +210,11 @@ class BrownfieldSwarm(BaseSwarm):
         legacy: LegacyAnalysisResult,
     ) -> EstimationResult:
         """Run the estimation stage with legacy risk factors."""
-        agent = EstimatorAgent(librarian=self.librarian)
+        agent = EstimatorAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
 
         # Add legacy-specific risk factors
         risk_factors = [
@@ -233,7 +245,11 @@ class BrownfieldSwarm(BaseSwarm):
         legacy: LegacyAnalysisResult,
     ) -> EngagementSummary:
         """Run the synthesis stage."""
-        agent = SynthesisAgent(librarian=self.librarian)
+        agent = SynthesisAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = SynthesisInput(
             pain_matrix=pain_matrix,
             architecture_result=architecture,
@@ -255,7 +271,11 @@ class BrownfieldSwarm(BaseSwarm):
         client_name: str,
     ) -> ProposalDocument:
         """Run the proposal stage."""
-        agent = ProposalAgent(librarian=self.librarian)
+        agent = ProposalAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = ProposalInput(
             engagement_summary=summary,
             client_name=client_name,

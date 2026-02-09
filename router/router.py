@@ -15,13 +15,20 @@ from config import settings, AGENT_BIBLE_MAPPING
 class Router:
     """Routes inputs to the appropriate swarm based on classification."""
 
-    def __init__(self, classifier: Optional[InputClassifier] = None):
+    def __init__(
+        self,
+        classifier: Optional[InputClassifier] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+    ):
         """Initialize the router.
 
         Args:
             classifier: Optional custom classifier instance
+            provider: LLM provider for classification (anthropic, openai, gemini, deepseek)
+            model: Model name for classification
         """
-        self.classifier = classifier or InputClassifier()
+        self.classifier = classifier or InputClassifier(provider=provider, model=model)
 
     def route(
         self,

@@ -41,16 +41,22 @@ class EngagementManager:
         self,
         max_cost_usd: Optional[float] = None,
         output_dir: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
     ):
         """Initialize the Engagement Manager.
 
         Args:
             max_cost_usd: Maximum cost budget for the run
             output_dir: Directory for output artifacts
+            provider: LLM provider (anthropic, openai, gemini, deepseek)
+            model: Model name override (e.g. gpt-4o, gemini-1.5-pro)
         """
         self.max_cost_usd = max_cost_usd or settings.max_cost_per_run_usd
         self.output_dir = Path(output_dir or settings.output_dir)
-        self.router = Router()
+        self.provider = provider
+        self.model = model
+        self.router = Router(provider=provider, model=model)
         self.librarian = Librarian()
         self.cost_controller = reset_cost_controller(self.max_cost_usd)
 
@@ -64,6 +70,8 @@ class EngagementManager:
         input_path: Optional[str] = None,
         codebase_content: Optional[str] = None,
         force_mode: Optional[Mode] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute a complete Meta-Factory run.
 
@@ -73,6 +81,8 @@ class EngagementManager:
             input_path: Optional path for input classification hints
             codebase_content: Optional codebase content for greyfield
             force_mode: Override automatic mode selection
+            provider: LLM provider override for this run
+            model: Model name override for this run
 
         Returns:
             Dictionary with run results, artifacts, and cost manifest
@@ -91,6 +101,8 @@ class EngagementManager:
                 input_content,
                 client_name,
                 codebase_content,
+                provider or self.provider,
+                model or self.model,
             )
 
             # Step 3: Finalize and return results
@@ -105,6 +117,8 @@ class EngagementManager:
         input_content: str,
         client_name: str,
         codebase_content: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Dispatch execution to the appropriate swarm.
 
@@ -113,6 +127,8 @@ class EngagementManager:
             input_content: Primary input content
             client_name: Client name
             codebase_content: Optional codebase for greyfield
+            provider: LLM provider for agents
+            model: Model name for agents
 
         Returns:
             Swarm execution results
@@ -121,6 +137,8 @@ class EngagementManager:
             swarm = GreenfieldSwarm(
                 librarian=self.librarian,
                 run_id=self._current_run_id,
+                provider=provider,
+                model=model,
             )
             swarm_input = GreenfieldInput(
                 transcript=input_content,
@@ -132,6 +150,8 @@ class EngagementManager:
             swarm = BrownfieldSwarm(
                 librarian=self.librarian,
                 run_id=self._current_run_id,
+                provider=provider,
+                model=model,
             )
             swarm_input = BrownfieldInput(
                 codebase_description=input_content,
@@ -146,6 +166,8 @@ class EngagementManager:
             swarm = GreyfieldSwarm(
                 librarian=self.librarian,
                 run_id=self._current_run_id,
+                provider=provider,
+                model=model,
             )
             swarm_input = GreyfieldInput(
                 transcript=input_content,
@@ -239,6 +261,8 @@ def run_factory(
     codebase_content: Optional[str] = None,
     force_mode: Optional[Mode] = None,
     max_cost_usd: Optional[float] = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Convenience function to run the Meta-Factory.
 
@@ -249,15 +273,23 @@ def run_factory(
         codebase_content: Optional codebase content for greyfield
         force_mode: Override automatic mode selection
         max_cost_usd: Maximum cost budget
+        provider: LLM provider (anthropic, openai, gemini, deepseek)
+        model: Model name (e.g. gpt-4o, gemini-1.5-pro)
 
     Returns:
         Run results dictionary
     """
-    manager = EngagementManager(max_cost_usd=max_cost_usd)
+    manager = EngagementManager(
+        max_cost_usd=max_cost_usd,
+        provider=provider,
+        model=model,
+    )
     return manager.run(
         input_content=input_content,
         client_name=client_name,
         input_path=input_path,
         codebase_content=codebase_content,
         force_mode=force_mode,
+        provider=provider,
+        model=model,
     )

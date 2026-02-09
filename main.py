@@ -193,7 +193,9 @@ def main(
     # Classify input if in auto mode
     if mode == "auto" or classify_only:
         console.print("\n[bold]Classifying input...[/bold]")
-        classification = classify_input(input_content, input_path)
+        classification = classify_input(
+            input_content, input_path, provider=provider, model=model
+        )
 
         console.print(f"  [green]Type:[/green] {classification.input_type.value}")
         console.print(f"  [green]Confidence:[/green] {classification.confidence:.0%}")
@@ -240,6 +242,8 @@ def main(
             codebase_content=codebase_content,
             force_mode=force_mode,
             max_cost_usd=max_cost,
+            provider=provider,
+            model=model,
         )
 
         progress.update(task, completed=True)

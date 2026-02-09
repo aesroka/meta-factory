@@ -173,7 +173,11 @@ class GreyfieldSwarm(BaseSwarm):
         context: Optional[str],
     ) -> PainMonetizationMatrix:
         """Run the discovery analysis."""
-        agent = DiscoveryAgent(librarian=self.librarian)
+        agent = DiscoveryAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = DiscoveryInput(
             transcript=transcript,
             context=context,
@@ -194,7 +198,11 @@ class GreyfieldSwarm(BaseSwarm):
         known_issues: Optional[list[str]],
     ) -> LegacyAnalysisResult:
         """Run the legacy analysis."""
-        agent = LegacyAgent(librarian=self.librarian)
+        agent = LegacyAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = LegacyInput(
             codebase_description=codebase_description,
             code_samples=code_samples,
@@ -258,7 +266,11 @@ class GreyfieldSwarm(BaseSwarm):
         quality_priorities: Optional[list[str]],
     ) -> ArchitectureResult:
         """Run architecture planning with both discovery and legacy context."""
-        agent = ArchitectAgent(librarian=self.librarian)
+        agent = ArchitectAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
 
         # Merge constraints
         merged_constraints = ConstraintList(
@@ -287,7 +299,11 @@ class GreyfieldSwarm(BaseSwarm):
         legacy: LegacyAnalysisResult,
     ) -> EstimationResult:
         """Run estimation with greyfield risk factors."""
-        agent = EstimatorAgent(librarian=self.librarian)
+        agent = EstimatorAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
 
         risk_factors = [
             "Integration with existing platform",
@@ -317,7 +333,11 @@ class GreyfieldSwarm(BaseSwarm):
         legacy: LegacyAnalysisResult,
     ) -> EngagementSummary:
         """Run synthesis with all context."""
-        agent = SynthesisAgent(librarian=self.librarian)
+        agent = SynthesisAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = SynthesisInput(
             pain_matrix=pain_matrix,
             architecture_result=architecture,
@@ -339,7 +359,11 @@ class GreyfieldSwarm(BaseSwarm):
         client_name: str,
     ) -> ProposalDocument:
         """Run proposal generation."""
-        agent = ProposalAgent(librarian=self.librarian)
+        agent = ProposalAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = ProposalInput(
             engagement_summary=summary,
             client_name=client_name,

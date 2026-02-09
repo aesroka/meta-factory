@@ -105,7 +105,11 @@ class GreenfieldSwarm(BaseSwarm):
 
     def _run_discovery(self, input_data: GreenfieldInput) -> PainMonetizationMatrix:
         """Run the discovery stage."""
-        agent = DiscoveryAgent(librarian=self.librarian)
+        agent = DiscoveryAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = DiscoveryInput(
             transcript=input_data.transcript,
             context=input_data.context,
@@ -125,7 +129,11 @@ class GreenfieldSwarm(BaseSwarm):
         quality_priorities: Optional[list[str]] = None,
     ) -> ArchitectureResult:
         """Run the architecture stage."""
-        agent = ArchitectAgent(librarian=self.librarian)
+        agent = ArchitectAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = ArchitectInput(
             pain_matrix=pain_matrix,
             quality_priorities=quality_priorities,
@@ -141,7 +149,11 @@ class GreenfieldSwarm(BaseSwarm):
 
     def _run_estimation(self, architecture: ArchitectureResult) -> EstimationResult:
         """Run the estimation stage."""
-        agent = EstimatorAgent(librarian=self.librarian)
+        agent = EstimatorAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = EstimatorInput(
             architecture_decisions=architecture.decisions,
             project_phase="requirements_complete",
@@ -162,7 +174,11 @@ class GreenfieldSwarm(BaseSwarm):
         estimation: EstimationResult,
     ) -> EngagementSummary:
         """Run the synthesis stage."""
-        agent = SynthesisAgent(librarian=self.librarian)
+        agent = SynthesisAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = SynthesisInput(
             pain_matrix=pain_matrix,
             architecture_result=architecture,
@@ -183,7 +199,11 @@ class GreenfieldSwarm(BaseSwarm):
         client_name: str,
     ) -> ProposalDocument:
         """Run the proposal stage."""
-        agent = ProposalAgent(librarian=self.librarian)
+        agent = ProposalAgent(
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         agent_input = ProposalInput(
             engagement_summary=summary,
             client_name=client_name,

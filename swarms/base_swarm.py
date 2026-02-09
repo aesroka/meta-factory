@@ -48,17 +48,23 @@ class BaseSwarm(ABC):
         self,
         librarian: Optional[Librarian] = None,
         run_id: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
     ):
         """Initialize the swarm.
 
         Args:
             librarian: Shared librarian instance
             run_id: Unique identifier for this run
+            provider: LLM provider for agents (anthropic, openai, gemini, deepseek)
+            model: Model name for agents
         """
         self.librarian = librarian or Librarian()
         self.run_id = run_id or self._generate_run_id()
         self.run = SwarmRun(run_id=self.run_id, mode=self.mode_name)
         self._cost_exceeded = False
+        self.provider = provider
+        self.model = model
 
     @property
     @abstractmethod
@@ -122,7 +128,12 @@ class BaseSwarm(ABC):
         current_output = result.output
 
         # Create critic for this agent
-        critic = CriticAgent(agent.role, librarian=self.librarian)
+        critic = CriticAgent(
+            agent.role,
+            librarian=self.librarian,
+            provider=self.provider,
+            model=self.model,
+        )
         all_objections: List[Objection] = []
         verdicts: List[CriticVerdict] = []
 

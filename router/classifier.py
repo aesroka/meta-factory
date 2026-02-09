@@ -239,15 +239,22 @@ Respond with JSON matching this schema:
         return mapping.get(input_type, Mode.GREENFIELD)
 
 
-def classify_input(content: str, path: Optional[str] = None) -> InputClassification:
+def classify_input(
+    content: str,
+    path: Optional[str] = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+) -> InputClassification:
     """Convenience function for classifying input.
 
     Args:
         content: Input content to classify
         path: Optional file path for hints
+        provider: LLM provider for classification
+        model: Model name for classification
 
     Returns:
         InputClassification result
     """
-    classifier = InputClassifier()
+    classifier = InputClassifier(provider=provider, model=model)
     return classifier.classify(content, path)
