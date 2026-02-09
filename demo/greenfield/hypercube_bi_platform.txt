@@ -1,0 +1,131 @@
+Project Brief: Business Intelligence Platform for Hypercube Consulting
+Date: February 2025
+Client: Hypercube Consulting (Internal Project)
+
+---
+
+## Executive Summary
+
+We need a self-service BI platform that consolidates data from our key business systems into unified dashboards. The goal is to have real-time visibility into sales pipeline, resource utilization, financials, and HR metrics in one place.
+
+## Current Situation
+
+Right now, getting a consolidated view of the business requires:
+- Logging into HubSpot to check pipeline and deals
+- Opening Hubplanner to see resource allocation and capacity
+- Checking Atlas (our HR system) for headcount and leave data
+- Downloading Excel reports from SharePoint for project tracking
+- Exporting data from Xero to understand financials
+
+This takes hours every week and the data is always stale by the time we compile it. Last month I spent an entire day just trying to reconcile our resource utilization against billable revenue - the numbers didn't match because they came from different systems at different times.
+
+## Pain Points
+
+1. **Time wasted on manual reporting**: Roughly 6-8 hours per week compiling data across systems
+2. **Stale data**: By the time reports are compiled, they're already outdated
+3. **No single source of truth**: Different systems show conflicting numbers
+4. **Can't spot trends**: Without historical data in one place, we can't see patterns
+5. **Reactive not proactive**: We find out about problems after they've happened
+
+## Requirements
+
+### Core Platform
+- Apache Superset for visualization and dashboards
+- AWS infrastructure (we already have an AWS account)
+- Athena as the query engine (serverless, pay per query)
+- S3 as the data lake storage
+
+### Data Sources to Integrate
+
+1. **HubSpot CRM**
+   - Deals and pipeline stages
+   - Companies and contacts
+   - Activities and engagement
+   - Revenue forecasts
+
+2. **Hubplanner**
+   - Resource bookings and allocations
+   - Project assignments
+   - Capacity and availability
+   - Timesheet data
+
+3. **Atlas (HR System)**
+   - Employee directory
+   - Leave balances and requests
+   - Department structure
+   - Start dates and tenure
+
+4. **SharePoint Excel Files**
+   - Project tracking spreadsheets
+   - Budget vs actuals
+   - Client satisfaction scores
+   - Various ad-hoc reports
+
+5. **Xero Accounting**
+   - Invoices and payments
+   - Revenue by client/project
+   - Expenses and costs
+   - Cash flow data
+
+### Dashboards Needed
+
+1. **Executive Dashboard**
+   - Revenue vs target
+   - Pipeline health
+   - Utilization rate
+   - Headcount trends
+
+2. **Sales Dashboard**
+   - Deal pipeline by stage
+   - Win/loss rates
+   - Forecast accuracy
+   - Sales cycle length
+
+3. **Resource Dashboard**
+   - Utilization by person/team
+   - Capacity vs demand
+   - Bench time
+   - Skills matrix
+
+4. **Financial Dashboard**
+   - Revenue by client
+   - Profit margins
+   - Outstanding invoices
+   - Cash position
+
+### Users and Access
+
+- **Phase 1**: Single admin user (me) - full access to everything
+- **Future**: Role-based access control
+  - Integrate with Active Directory / Microsoft Entra ID
+  - Exchange-linked email for notifications
+  - Different permission levels (exec, manager, team member)
+
+### Technical Constraints
+
+- Must run on AWS (existing account)
+- Budget-conscious - prefer serverless/pay-per-use
+- I can do some technical work but not a full-time DevOps person
+- Need to be maintainable by a small team
+
+### Timeline
+
+- Want something usable within 4-6 weeks
+- Doesn't need to be perfect initially
+- Can iterate and add data sources over time
+
+### Budget
+
+- Looking for a phased approach
+- Phase 1: Core infrastructure + 2-3 key data sources
+- Don't have a fixed budget but want to understand trade-offs
+
+---
+
+## Questions I Have
+
+1. Should we use Superset's built-in connectors or build a proper ETL pipeline?
+2. How do we handle API rate limits from HubSpot/Xero?
+3. What's the best way to handle SharePoint Excel files - real-time or batch?
+4. How do we ensure data freshness without breaking the bank on compute costs?
+5. What's the upgrade path to multi-user with AD integration?

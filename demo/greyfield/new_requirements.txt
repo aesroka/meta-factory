@@ -1,0 +1,63 @@
+New Feature Requirements - Customer Self-Service Portal
+Client: TechFlow Industries
+Date: 2024-01-25
+
+---
+
+## Background
+
+TechFlow has an existing OrderFlow ERP system (legacy, Python 2.7) that handles internal order processing. They now want to add a customer-facing self-service portal.
+
+## Discovery Notes (from stakeholder interviews)
+
+### From Sarah Chen (CTO):
+"Our customers keep calling to ask 'where's my order?' We spend 4 hours per inquiry just looking things up. If customers could see their order status themselves, we'd save at least 2 FTE worth of support calls."
+
+### From Mike Rodriguez (Ops Manager):
+"Last week a major customer threatened to leave because they couldn't get a straight answer about a delayed shipment. Our competitor has a portal - customers can see everything in real-time. We're losing deals over this."
+
+### From Customer Support Team:
+"We handle about 150 'where is my order' calls per day. Each one takes 15-20 minutes because we have to dig through three different systems. That's 40+ hours per day just answering the same question."
+
+## Required Capabilities
+
+1. **Order Status Tracking**
+   - Customers can see all their orders
+   - Real-time status updates
+   - Estimated delivery dates
+   - Shipping tracking integration
+
+2. **Order History**
+   - View past orders
+   - Download invoices (PDF)
+   - Reorder from history
+
+3. **Account Management**
+   - Update contact information
+   - Manage shipping addresses
+   - View account balance/credit
+
+4. **Support Tickets**
+   - Submit issues about orders
+   - Track ticket status
+   - Attach files/images
+
+## Technical Constraints
+
+- Must read from existing OrderFlow database (PostgreSQL 9.4)
+- Cannot modify core OrderFlow system significantly
+- Need to work around lack of API in legacy system
+- Must support 500+ concurrent customer sessions
+- SSO with customer's existing identity providers
+
+## Timeline
+
+- Phase 1 (Order Status): 3 months
+- Phase 2 (History + Reorder): 2 months
+- Phase 3 (Account + Tickets): 2 months
+
+## Budget
+
+$400K total across all phases
+
+---

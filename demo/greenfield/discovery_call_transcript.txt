@@ -1,0 +1,50 @@
+Discovery Call Transcript - TechFlow Industries
+Date: 2024-01-15
+Attendees: Sarah Chen (CTO), Mike Rodriguez (Ops Manager), Jane Smith (Consultant)
+
+---
+
+Jane: Thanks for taking the time today. Can you walk me through what's happening with your order processing?
+
+Sarah: Sure. We're a mid-size manufacturer - about 500 orders per day. The problem is our order entry is entirely manual. My team types everything from email PDFs into our ERP system.
+
+Jane: When did this become a significant issue?
+
+Mike: It's been painful for about 18 months. We grew 40% last year but couldn't scale the back office. Last quarter alone, we had 47 order entry errors that resulted in wrong shipments.
+
+Jane: What did those errors cost you?
+
+Mike: Each wrong shipment costs us roughly $2,500 in returns, reshipping, and customer compensation. So that's about $117,000 last quarter just in error costs. Plus we've lost two major accounts who got fed up with the mistakes.
+
+Jane: What have you tried to solve this?
+
+Sarah: We hired three more data entry staff. That helped with volume but not accuracy - actually made it worse because training was rushed. We also looked at some off-the-shelf solutions but they don't integrate with our custom ERP.
+
+Jane: Tell me about your ERP system.
+
+Sarah: It's a custom-built system from 2015. Works well for our manufacturing workflow, but the API is limited. Our previous vendor quoted $800K to add proper integration capabilities.
+
+Mike: The real pain is month-end. My team works weekends just to reconcile orders. Last month I had three people here until midnight for five days straight.
+
+Jane: How does this affect your customers?
+
+Mike: Response time is the killer. When a customer calls asking about an order, we have to manually search through emails and spreadsheets. Average response time is 4 hours. Our competitors respond in minutes.
+
+Sarah: We've lost about $2M in contracts this year to competitors who have better systems. The CFO is not happy.
+
+Jane: What would success look like for you?
+
+Sarah: If we could get order entry errors below 1%, automate at least 80% of the data entry, and give customers real-time order status - that would be transformative. We'd finally be able to focus on growth instead of firefighting.
+
+Mike: I'd love to get my weekends back. And honestly, if we could reduce the team from 12 data entry staff to maybe 4 handling exceptions, the CFO would approve almost any reasonable investment.
+
+Jane: What's your timeline for solving this?
+
+Sarah: We need something in place before Q4. That's our peak season and last year was a disaster. So ideally, we'd want to start implementation by June.
+
+Jane: What's your budget range?
+
+Sarah: The CFO has approved up to $500K for the right solution, given the ROI potential. But we'd need to see a clear payback within 18 months.
+
+---
+End of transcript

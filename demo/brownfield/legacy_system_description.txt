@@ -1,0 +1,89 @@
+Legacy System Analysis Request - OrderFlow ERP
+Client: TechFlow Industries
+Date: 2024-01-20
+
+---
+
+## System Overview
+
+OrderFlow is a custom ERP system built in 2015. It handles order management, inventory tracking, and basic customer management for a manufacturing company processing ~500 orders/day.
+
+## Technology Stack
+
+- Backend: Python 2.7 (yes, really) with Flask 0.10
+- Database: PostgreSQL 9.4
+- Frontend: jQuery 1.x with server-rendered Jinja templates
+- Deployment: Single bare-metal server, no containerization
+- No CI/CD pipeline - deployments are manual FTP uploads
+
+## Known Issues
+
+1. **No API layer**: All integrations are done via direct database queries or file drops
+2. **Monolithic architecture**: Single 50,000 line Python file (order_processor.py)
+3. **No tests**: Zero unit tests, zero integration tests
+4. **Hardcoded configurations**: Database credentials in source code
+5. **No logging**: Errors go to stdout, no centralized logging
+6. **Session management**: Using pickle files for session storage
+7. **SQL injection vulnerabilities**: Raw string concatenation in queries
+
+## Code Sample - Order Processing
+
+```python
+# From order_processor.py (line 12,847)
+def process_order(order_data):
+    conn = psycopg2.connect("host=localhost dbname=orderflow user=admin password=admin123")
+    cursor = conn.cursor()
+
+    # Build query
+    query = "INSERT INTO orders (customer_id, product_id, quantity) VALUES (%s, %s, %s)" % (
+        order_data['customer_id'],
+        order_data['product_id'],
+        order_data['quantity']
+    )
+
+    cursor.execute(query)
+    conn.commit()
+
+    # Update inventory
+    inv_query = "UPDATE inventory SET quantity = quantity - " + str(order_data['quantity']) + " WHERE product_id = " + str(order_data['product_id'])
+    cursor.execute(inv_query)
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return True
+```
+
+## Dependencies
+
+- 47 pip packages, many unmaintained
+- Relies on deprecated Google APIs
+- Uses a payment processor SDK that's 6 major versions behind
+
+## Current Pain Points
+
+1. Cannot upgrade Python - too many dependencies break
+2. Adding features takes 10x longer than it should
+3. Every change risks breaking something else
+4. No way to add external integrations safely
+5. Performance degrades significantly over 200 concurrent users
+
+## Constraints
+
+- System must remain operational during any modernization
+- Cannot lose historical order data (8 years)
+- Must maintain compatibility with warehouse barcode scanners
+- Budget: ~$300K over 12 months
+- Timeline: Need API capability within 6 months for partner integration
+
+## Desired End State
+
+- Modern Python 3.x codebase
+- RESTful API for integrations
+- Proper test coverage (>80%)
+- Containerized deployment
+- CI/CD pipeline
+- Structured logging and monitoring
+
+---
