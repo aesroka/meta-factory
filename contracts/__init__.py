@@ -65,6 +65,13 @@ from .proposal_contracts import (
     ProposalDocument,
 )
 
+from .project import (
+    Stakeholder,
+    TechConstraint,
+    CoreLogicFlow,
+    ProjectDossier,
+)
+
 __all__ = [
     # Router
     "InputType",
@@ -114,4 +121,9 @@ __all__ = [
     "RiskItem",
     "EngagementSummary",
     "ProposalDocument",
+    # Project (Forge-Stream Dossier)
+    "Stakeholder",
+    "TechConstraint",
+    "CoreLogicFlow",
+    "ProjectDossier",
 ]
