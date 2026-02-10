@@ -78,7 +78,12 @@ For each pain point identified:
 - If the input lacks concrete evidence, lower your confidence scores
 """
 
-    def __init__(self, librarian: Optional[Librarian] = None, model: Optional[str] = None):
+    def __init__(
+        self,
+        librarian: Optional[Librarian] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+    ):
         """Initialize the Discovery Agent."""
         super().__init__(
             role="discovery",
@@ -86,6 +91,7 @@ For each pain point identified:
             output_schema=PainMonetizationMatrix,
             librarian=librarian,
             model=model,
+            provider=provider,
         )
 
     def get_task_description(self) -> str:

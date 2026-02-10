@@ -23,8 +23,14 @@ class OpenAIProvider(LLMProvider):
         """Initialize OpenAI provider.
 
         Args:
-            api_key: OpenAI API key. Uses OPENAI_API_KEY env var if not provided.
+            api_key: OpenAI API key. Uses config (META_FACTORY_OPENAI_API_KEY) or OPENAI_API_KEY env if not provided.
         """
+        if api_key is None:
+            try:
+                from config import settings
+                api_key = settings.openai_api_key
+            except Exception:
+                api_key = None
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
         self._client = None
 
@@ -91,8 +97,14 @@ class DeepseekProvider(LLMProvider):
         """Initialize Deepseek provider.
 
         Args:
-            api_key: Deepseek API key. Uses DEEPSEEK_API_KEY env var if not provided.
+            api_key: Deepseek API key. Uses config (META_FACTORY_DEEPSEEK_API_KEY) or DEEPSEEK_API_KEY env if not provided.
         """
+        if api_key is None:
+            try:
+                from config import settings
+                api_key = settings.deepseek_api_key
+            except Exception:
+                api_key = None
         self.api_key = api_key or os.environ.get("DEEPSEEK_API_KEY")
         self._client = None
 

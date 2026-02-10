@@ -1,5 +1,12 @@
 """Configuration settings for the Meta-Factory system."""
 
+# Load .env into os.environ so provider fallbacks (e.g. GOOGLE_API_KEY) work
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Dict, List
@@ -81,10 +88,22 @@ class Settings(BaseSettings):
         description="Minimum confidence for automatic routing; below this asks user"
     )
 
-    # API settings
+    # API settings (env: META_FACTORY_<KEY> or standard env var)
     anthropic_api_key: str = Field(
         default="",
-        description="Anthropic API key (can also use ANTHROPIC_API_KEY env var)"
+        description="Anthropic API key for Claude (env: META_FACTORY_ANTHROPIC_API_KEY)",
+    )
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key (env: META_FACTORY_OPENAI_API_KEY)",
+    )
+    google_api_key: str = Field(
+        default="",
+        description="Google/Gemini API key (env: META_FACTORY_GOOGLE_API_KEY)",
+    )
+    deepseek_api_key: str = Field(
+        default="",
+        description="Deepseek API key (env: META_FACTORY_DEEPSEEK_API_KEY)",
     )
     api_timeout_seconds: int = Field(
         default=120,

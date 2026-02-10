@@ -22,8 +22,14 @@ class AnthropicProvider(LLMProvider):
         """Initialize Anthropic provider.
 
         Args:
-            api_key: Anthropic API key. Uses ANTHROPIC_API_KEY env var if not provided.
+            api_key: Anthropic API key. Uses config (META_FACTORY_ANTHROPIC_API_KEY) or ANTHROPIC_API_KEY env if not provided.
         """
+        if api_key is None:
+            try:
+                from config import settings
+                api_key = settings.anthropic_api_key
+            except Exception:
+                api_key = None
         self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         self._client = None
 

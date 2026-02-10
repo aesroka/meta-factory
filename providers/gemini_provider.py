@@ -21,9 +21,16 @@ class GeminiProvider(LLMProvider):
         """Initialize Gemini provider.
 
         Args:
-            api_key: Google API key. Uses GOOGLE_API_KEY or GEMINI_API_KEY env var if not provided.
+            api_key: Google API key. Uses config (META_FACTORY_GOOGLE_API_KEY) or GOOGLE_API_KEY/GEMINI_API_KEY env if not provided.
         """
-        self.api_key = api_key or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        if api_key is None:
+            try:
+                from config import settings
+                api_key = settings.google_api_key
+            except Exception:
+                api_key = None
+        self.api_key = (api_key or os.environ.get("GOOGLE_API_KEY") or
+                        os.environ.get("GEMINI_API_KEY"))
         self._configured = False
 
     @property
