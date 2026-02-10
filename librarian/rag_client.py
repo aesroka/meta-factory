@@ -5,6 +5,7 @@ Supports both ragflow-sdk (Python >=3.12) and HTTP API fallback for compatibilit
 
 from __future__ import annotations
 
+import secrets
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -46,54 +47,84 @@ class RAGFlowClient:
         # HTTP fallback: we only check key presence
         return True
 
-    def ensure_dataset(self, name: Optional[str] = None) -> str:
-        """Get or create the workspace dataset; return its ID."""
-        name = name or settings.ragflow_dataset_name
-        if self._client is not None:
-            return self._ensure_dataset_sdk(name)
-        return self._ensure_dataset_http(name)
+    def ensure_dataset(self, name: Optional[str] = None, unique: bool = True) -> str:
+        """Get or create the workspace dataset; return its ID.
 
-    def _ensure_dataset_sdk(self, name: str) -> str:
-        datasets = self._client.list_datasets(name=name)
-        if datasets:
-            self._dataset_id = datasets[0].id
-            return self._dataset_id
-        dataset = self._client.create_dataset(name=name)
+        If unique is True (default), appends a short random suffix to the default
+        dataset name and always creates (no list reuse) so we own the dataset.
+        """
+        base = name or settings.ragflow_dataset_name
+        use_unique_name = unique and base == settings.ragflow_dataset_name
+        if use_unique_name:
+            name = f"{base}-{secrets.token_hex(4)}"
+        else:
+            name = base
+        if self._client is not None:
+            return self._ensure_dataset_sdk(name, create_only=use_unique_name)
+        return self._ensure_dataset_http(name, create_only=use_unique_name)
+
+    def _ensure_dataset_sdk(self, name: str, create_only: bool = False) -> str:
+        if not create_only:
+            datasets = self._client.list_datasets(name=name)
+            if datasets:
+                self._dataset_id = datasets[0].id
+                return self._dataset_id
+        dataset = self._client.create_dataset(
+            name=name, embedding_model=settings.ragflow_embedding_model
+        )
         self._dataset_id = dataset.id
         return self._dataset_id
 
-    def _ensure_dataset_http(self, name: str) -> str:
+    def _ensure_dataset_http(self, name: str, create_only: bool = False) -> str:
         import requests
 
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-        # List datasets
-        r = requests.get(
-            f"{self.base_url}/api/v1/datasets",
-            headers=headers,
-            params={"name": name, "page": 1, "page_size": 10},
-            timeout=30,
-        )
-        r.raise_for_status()
-        data = r.json()
-        if data.get("code") != 0:
-            raise RuntimeError(data.get("message", "list datasets failed"))
-        items = data.get("data", []) or []
-        for item in items:
-            if (item.get("name") or "").lower() == name.lower():
-                self._dataset_id = item["id"]
-                return self._dataset_id
-        # Create
+
+        if not create_only:
+            r = requests.get(
+                f"{self.base_url}/api/v1/datasets",
+                headers=headers,
+                params={"name": name, "page": 1, "page_size": 10},
+                timeout=30,
+            )
+            r.raise_for_status()
+            data = r.json()
+            if data.get("code") != 0:
+                raise RuntimeError(data.get("message", "list datasets failed"))
+            raw = data.get("data")
+            items = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                if (item.get("name") or "").lower() == name.lower():
+                    self._dataset_id = item.get("id") or item.get("_id")
+                    if self._dataset_id:
+                        return self._dataset_id
+
+        # Create (explicit permission so we own it)
         r = requests.post(
             f"{self.base_url}/api/v1/datasets",
             headers=headers,
-            json={"name": name},
+            json={
+                "name": name,
+                "permission": "me",
+                "embedding_model": settings.ragflow_embedding_model,
+            },
             timeout=30,
         )
         r.raise_for_status()
         data = r.json()
         if data.get("code") != 0:
             raise RuntimeError(data.get("message", "create dataset failed"))
-        self._dataset_id = data["data"]["id"]
+        payload = data.get("data")
+        if isinstance(payload, dict):
+            self._dataset_id = payload.get("id") or payload.get("_id")
+        elif isinstance(payload, str):
+            self._dataset_id = payload
+        else:
+            self._dataset_id = None
+        if not self._dataset_id:
+            raise RuntimeError("create dataset response missing dataset id")
         return self._dataset_id
 
     def upload_document(
@@ -149,13 +180,20 @@ class RAGFlowClient:
         data = r.json()
         if data.get("code") != 0:
             raise RuntimeError(data.get("message", "upload failed"))
-        doc_id = data.get("data", {}).get("id")
+        payload = data.get("data")
+        if isinstance(payload, list) and payload:
+            first = payload[0]
+            doc_id = first.get("id") if isinstance(first, dict) else None
+        elif isinstance(payload, dict):
+            doc_id = payload.get("id")
+        else:
+            doc_id = None
         if not doc_id:
             raise RuntimeError("upload response missing document id")
         # Trigger parse (if endpoint exists)
         try:
             parse_r = requests.post(
-                f"{self.base_url}/api/v1/datasets/{dataset_id}/documents/parse",
+                f"{self.base_url}/api/v1/datasets/{dataset_id}/chunks",
                 headers={**headers, "Content-Type": "application/json"},
                 json={"document_ids": [doc_id]},
                 timeout=30,
@@ -216,7 +254,13 @@ class RAGFlowClient:
         data = r.json()
         if data.get("code") != 0:
             return {"documents": [], "message": data.get("message", "list documents failed")}
-        items = data.get("data", []) or []
+        payload = data.get("data")
+        if isinstance(payload, dict) and "docs" in payload:
+            items = payload["docs"] or []
+        elif isinstance(payload, list):
+            items = payload
+        else:
+            items = []
         documents = [
             {
                 "id": d.get("id", ""),
@@ -226,6 +270,7 @@ class RAGFlowClient:
                 "chunk_count": d.get("chunk_count", 0),
             }
             for d in items
+            if isinstance(d, dict)
         ]
         return {"documents": documents}
 
@@ -319,25 +364,35 @@ class RAGFlowClient:
         import requests
 
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-        body = {"query": query, "top_k": top_k}
+        body = {
+            "dataset_ids": [dataset_id],
+            "question": query.strip(),
+            "top_k": top_k,
+        }
         if similarity_threshold is not None:
             body["similarity_threshold"] = similarity_threshold
         r = requests.post(
-            f"{self.base_url}/api/v1/datasets/{dataset_id}/retrieve",
+            f"{self.base_url}/api/v1/retrieval",
             headers=headers,
             json=body,
             timeout=30,
         )
         if r.status_code != 200:
+            print(f"  [RAGFlow] search HTTP {r.status_code}: {r.text[:200]}")
             return []
         data = r.json()
         if data.get("code") != 0:
+            print(f"  [RAGFlow] search error code {data.get('code')}: {data.get('message', '')}")
             return []
-        items = data.get("data", []) or []
+        payload = data.get("data")
+        chunks = payload.get("chunks", []) if isinstance(payload, dict) else []
+        if not isinstance(chunks, list):
+            chunks = []
         return [
             {
                 "content": c.get("content", c.get("text", "")),
                 "similarity": c.get("similarity"),
             }
-            for c in items[:top_k]
+            for c in chunks[:top_k]
+            if isinstance(c, dict)
         ]

@@ -155,6 +155,7 @@ class Librarian:
         workspace_dir: Optional[Path] = None,
         dataset_name: Optional[str] = None,
         wait_parsed: bool = True,
+        parse_timeout_sec: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Sync workspace folder to RAGFlow: scan, upload new files, trigger DDU parsing.
 
@@ -165,6 +166,7 @@ class Librarian:
             workspace_dir: Directory to scan. Defaults to settings.workspace_dir.
             dataset_name: RAGFlow dataset name. Defaults to settings.ragflow_dataset_name.
             wait_parsed: If True, block until all uploaded documents are parsed.
+            parse_timeout_sec: Max seconds to wait for parsing (default from settings).
 
         Returns:
             Dict with uploaded_count, document_ids, dataset_id, and optional parse results.
@@ -207,9 +209,7 @@ class Librarian:
                 )
                 uploaded.append(doc_id)
             except Exception as e:
-                if "upload" in str(e).lower():
-                    raise
-                continue
+                raise RuntimeError(f"Upload failed for {path.name}: {e}") from e
 
         result: Dict[str, Any] = {
             "uploaded_count": len(uploaded),
@@ -217,7 +217,11 @@ class Librarian:
             "dataset_id": dataset_id,
         }
         if wait_parsed and uploaded:
-            result["parse_results"] = client.wait_for_parsed(dataset_id=dataset_id, document_ids=uploaded)
+            result["parse_results"] = client.wait_for_parsed(
+                dataset_id=dataset_id,
+                document_ids=uploaded,
+                timeout_sec=parse_timeout_sec,
+            )
         return result
 
     def get_rag_passages(self, query: str, agent_role: str, top_k: int = 5) -> List[str]:

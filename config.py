@@ -108,6 +108,10 @@ class Settings(BaseSettings):
         default="meta-factory-workspace",
         description="Default dataset name for workspace sync",
     )
+    ragflow_embedding_model: str = Field(
+        default="BAAI/bge-small-en-v1.5@Builtin",
+        description="Embedding model for RAGFlow datasets (format: model@provider)",
+    )
     ragflow_parse_poll_interval_sec: float = Field(
         default=2.0,
         description="Seconds between polling for document parse status",

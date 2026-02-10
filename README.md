@@ -44,6 +44,14 @@ python main.py --input ./legacy_codebase/ --mode brownfield
 python main.py --input ./client_transcripts/ --codebase ./legacy_codebase/ --mode greyfield
 ```
 
+## RAGFlow (Forge-Stream)
+
+To run the RAG pipeline end-to-end (sync workspace → RAGFlow → search):
+
+1. **Set up RAGFlow** – See **[docs/RAGFLOW_SETUP.md](docs/RAGFLOW_SETUP.md)** for Docker, API key, and `.env` configuration.
+2. **Add content** – Put `.txt`/`.md` (etc.) files in `workspace/` (or use the included `workspace/sample_transcript.txt` and `workspace/sample_notes.txt`).
+3. **Run the demo** – `python scripts/rag_demo.py` to sync, wait for parsing, and run example searches.
+
 ## Development
 
 ### Running Tests

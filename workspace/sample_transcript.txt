@@ -1,0 +1,23 @@
+Discovery Call – Acme Logistics
+Date: 2024-02-01
+Attendees: Alex (Product), Sam (Engineering), Jordan (Consultant)
+
+---
+
+Jordan: What’s the main pain point you want to tackle first?
+
+Alex: Our drivers still get paper manifests. Dispatchers print them every morning. If a route changes, we have to reprint and sometimes drivers leave before the update.
+
+Sam: The backend can push updates via API, but the field app doesn’t support dynamic manifest refresh. So we’re stuck with “print once at 6am.”
+
+Jordan: How many drivers and dispatchers are we talking about?
+
+Alex: About 80 drivers, 12 dispatchers. Each dispatcher handles a region.
+
+Jordan: What would good look like?
+
+Alex: Driver opens the app, sees today’s manifest, and it updates when we change the route. No paper. We’ve had compliance issues too—auditors want digital records.
+
+Sam: We’d need the mobile app to subscribe to route updates and maybe offline support for areas with bad signal.
+
+Jordan: Got it. So we’re looking at real-time manifest updates, fewer paper-based errors, and an audit trail.
