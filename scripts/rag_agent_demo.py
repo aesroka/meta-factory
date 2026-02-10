@@ -115,6 +115,14 @@ def main() -> None:
         print("\n[ERROR] META_FACTORY_RAGFLOW_API_KEY is not set. Add it to .env.")
         sys.exit(1)
 
+    # Fail fast if the chosen LLM provider has no API key
+    from providers import get_provider
+    provider = get_provider(args.provider, args.model)
+    if not provider.is_available():
+        print(f"\n[ERROR] Provider '{args.provider}' has no API key configured.")
+        print(f"Set the key in .env (see docs/RAGFLOW_SETUP.md) or pass a different --provider.")
+        sys.exit(1)
+
     workspace_dir = (REPO_ROOT / "workspace").resolve()
     lib = Librarian()
     dataset_id = None
@@ -145,7 +153,7 @@ def main() -> None:
         from librarian.rag_client import RAGFlowClient
         client = RAGFlowClient()
         if client.is_available():
-            dataset_id = client.ensure_dataset()
+            dataset_id = client.ensure_dataset(unique=False)
             print(f"Using dataset_id={dataset_id}")
         else:
             print("[WARN] RAGFlow client not available; RAG context may be empty.")

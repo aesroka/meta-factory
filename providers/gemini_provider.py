@@ -10,11 +10,13 @@ class GeminiProvider(LLMProvider):
     """Provider for Google Gemini models."""
 
     MODELS = {
-        "gemini-2.0-flash": "gemini-2.0-flash-exp",
-        "gemini-1.5-pro": "gemini-1.5-pro",
-        "gemini-1.5-flash": "gemini-1.5-flash",
-        "gemini-pro": "gemini-1.5-pro",
-        "gemini-flash": "gemini-1.5-flash",
+        "gemini-2.5-flash": "gemini-2.5-flash",
+        "gemini-2.5-pro": "gemini-2.5-pro",
+        "gemini-2.0-flash": "gemini-2.0-flash",
+        "gemini-2.0-flash-lite": "gemini-2.0-flash-lite",
+        # Convenience aliases
+        "gemini-pro": "gemini-2.5-pro",
+        "gemini-flash": "gemini-2.5-flash",
     }
 
     def __init__(self, api_key: Optional[str] = None):
@@ -39,7 +41,7 @@ class GeminiProvider(LLMProvider):
 
     @property
     def default_model(self) -> str:
-        return "gemini-1.5-pro"
+        return "gemini-2.0-flash"
 
     def _configure(self):
         if not self._configured and self.api_key:

@@ -41,9 +41,10 @@ MODEL_PROVIDERS: Dict[str, str] = {
     "gemini": "gemini",
     "gemini-pro": "gemini",
     "gemini-flash": "gemini",
-    "gemini-1.5-pro": "gemini",
-    "gemini-1.5-flash": "gemini",
+    "gemini-2.5-flash": "gemini",
+    "gemini-2.5-pro": "gemini",
     "gemini-2.0-flash": "gemini",
+    "gemini-2.0-flash-lite": "gemini",
     # Deepseek
     "deepseek": "deepseek",
     "deepseek-chat": "deepseek",
