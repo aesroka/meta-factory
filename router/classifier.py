@@ -77,8 +77,8 @@ class InputClassifier:
                 recommended_mode=self._type_to_mode(input_type),
             )
 
-        # Stage 2: Try LLM classification for ambiguous cases (if API key available)
-        if self.api_key:
+        # Stage 2: Try LLM classification for ambiguous cases (if LLM available)
+        if self.llm_available:
             try:
                 return self._llm_classify(input_content, input_path)
             except Exception as e:
@@ -201,15 +201,15 @@ Respond with JSON matching this schema:
         if path:
             user_message = f"File path: {path}\n\n{user_message}"
 
-        response = self.client.messages.create(
+        response = self.llm_provider.complete(
+            system_prompt=system_prompt,
+            user_message=user_message,
             model=self.model,
             max_tokens=500,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
         )
 
         # Parse response
-        text = response.content[0].text.strip()
+        text = response.content.strip()
         if "```json" in text:
             start = text.find("```json") + 7
             end = text.find("```", start)
