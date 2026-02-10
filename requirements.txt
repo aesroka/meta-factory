@@ -15,6 +15,10 @@ rich>=13.0.0
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 
+# RAG (Forge-Stream Phase 1)
+# Note: ragflow-sdk requires Python >=3.12; use HTTP client below if on 3.9
+# ragflow-sdk>=0.23.0
+requests>=2.28.0   # RAGFlow HTTP API client
+
 # Future phases (uncomment when needed)
-# chromadb>=0.4.0  # RAG vector store
 # pypdf>=3.0.0     # PDF parsing for Bibles

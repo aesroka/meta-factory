@@ -2,12 +2,20 @@
 
 The Librarian provides a two-tier knowledge system:
 1. Cheat Sheets (always loaded) - 2-page framework summaries
-2. RAG retrieval (on-demand) - specific passages from full texts (Phase 5)
+2. RAG retrieval (on-demand) - RAGFlow workspace sync and search (Forge-Stream Phase 1)
 """
+from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from config import settings, AGENT_BIBLE_MAPPING
+
+
+# File extensions to sync from workspace to RAGFlow
+WORKSPACE_SYNC_EXTENSIONS = {
+    ".txt", ".md", ".py", ".js", ".ts", ".java", ".go", ".rs", ".rb",
+    ".php", ".cs", ".cpp", ".c", ".h", ".json", ".yaml", ".yml", ".html",
+}
 
 
 class Librarian:
@@ -21,15 +29,17 @@ class Librarian:
     RAG integration is Phase 5.
     """
 
-    def __init__(self, cheat_sheets_dir: Optional[str] = None):
+    def __init__(self, cheat_sheets_dir: Optional[str] = None, rag_client: Optional[Any] = None):
         """Initialize the Librarian.
 
         Args:
             cheat_sheets_dir: Path to cheat sheets directory.
                             Defaults to config setting.
+            rag_client: Optional RAGFlow client for sync_workspace and get_rag_passages.
         """
         self.cheat_sheets_dir = Path(cheat_sheets_dir or settings.cheat_sheets_dir)
         self._cheat_sheet_cache: Dict[str, str] = {}
+        self._rag_client = rag_client
         self._load_cheat_sheets()
 
     def _load_cheat_sheets(self) -> None:
@@ -140,18 +150,98 @@ class Librarian:
         """
         return self._combine_cheat_sheets(list(self._cheat_sheet_cache.keys()))
 
+    def sync_workspace(
+        self,
+        workspace_dir: Optional[Path] = None,
+        dataset_name: Optional[str] = None,
+        wait_parsed: bool = True,
+    ) -> Dict[str, Any]:
+        """Sync workspace folder to RAGFlow: scan, upload new files, trigger DDU parsing.
+
+        Recursively scans workspace for transcripts, docs, and code; uploads to a
+        RAGFlow dataset and triggers Deep Document Understanding (DDU) parsing.
+
+        Args:
+            workspace_dir: Directory to scan. Defaults to settings.workspace_dir.
+            dataset_name: RAGFlow dataset name. Defaults to settings.ragflow_dataset_name.
+            wait_parsed: If True, block until all uploaded documents are parsed.
+
+        Returns:
+            Dict with uploaded_count, document_ids, dataset_id, and optional parse results.
+
+        Raises:
+            RuntimeError: If RAGFlow is not configured (no API key).
+        """
+        from librarian.rag_client import RAGFlowClient
+
+        if not settings.ragflow_api_key:
+            raise RuntimeError("RAGFlow API key not set (META_FACTORY_RAGFLOW_API_KEY)")
+
+        workspace_path = Path(workspace_dir or settings.workspace_dir)
+        if not workspace_path.exists():
+            return {"uploaded_count": 0, "document_ids": [], "dataset_id": None, "message": "workspace dir not found"}
+
+        client = self._rag_client or RAGFlowClient()
+        if not client.is_available():
+            raise RuntimeError("RAGFlow client not available (check API key and URL)")
+
+        dataset_id = client.ensure_dataset(dataset_name)
+        uploaded: List[str] = []
+        files_to_upload: List[tuple] = []
+
+        for path in sorted(workspace_path.rglob("*")):
+            if not path.is_file() or path.suffix.lower() not in WORKSPACE_SYNC_EXTENSIONS:
+                continue
+            try:
+                blob = path.read_bytes()
+                files_to_upload.append((path, blob))
+            except Exception:
+                continue
+
+        for path, blob in files_to_upload:
+            try:
+                doc_id = client.upload_document(
+                    dataset_id=dataset_id,
+                    content=blob,
+                    display_name=path.name,
+                )
+                uploaded.append(doc_id)
+            except Exception as e:
+                if "upload" in str(e).lower():
+                    raise
+                continue
+
+        result: Dict[str, Any] = {
+            "uploaded_count": len(uploaded),
+            "document_ids": uploaded,
+            "dataset_id": dataset_id,
+        }
+        if wait_parsed and uploaded:
+            result["parse_results"] = client.wait_for_parsed(dataset_id=dataset_id, document_ids=uploaded)
+        return result
+
     def get_rag_passages(self, query: str, agent_role: str, top_k: int = 5) -> List[str]:
-        """Phase 5: Vector search against full Bible texts.
+        """RAG search over the workspace dataset (RAGFlow). Returns list of chunk texts.
+
+        If RAGFlow is not configured or unavailable, returns empty list (no error).
 
         Args:
             query: The search query.
-            agent_role: Agent role for context filtering.
+            agent_role: Agent role for context filtering (reserved for future use).
             top_k: Number of passages to return.
-
-        Raises:
-            NotImplementedError: RAG integration is Phase 5.
         """
-        raise NotImplementedError("RAG integration is Phase 5")
+        if not settings.ragflow_api_key:
+            return []
+        from librarian.rag_client import RAGFlowClient
+
+        client = self._rag_client or RAGFlowClient()
+        if not client.is_available():
+            return []
+        try:
+            chunks = client.search(query=query, top_k=top_k)
+            return [c.get("content", "") or "" for c in chunks if c.get("content")]
+        except Exception:
+            return []
 
 
 # Convenience function for simple usage

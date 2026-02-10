@@ -52,16 +52,16 @@ These are the actual file paths and conventions in the existing repo — any ref
 
 *Goal: Use RAGFlow for all information gathering (reading transcripts, repos, and docs).*
 
-- [ ] **Add SDK:** Add `ragflow-sdk` to `requirements.txt` (replace the commented-out `chromadb` placeholder).
-- [ ] **RAG Client:** Create `librarian/rag_client.py` — a thin wrapper around the RAGFlow SDK handling connection, dataset management, upload, and parsing status.
-- [ ] **Librarian Refactor:** Update `librarian/librarian.py` to include `sync_workspace()`:
+- [x] **Add SDK / HTTP:** Add `requests` to `requirements.txt` for RAGFlow HTTP API (optional `ragflow-sdk` when on Python ≥3.12).
+- [x] **RAG Client:** Create `librarian/rag_client.py` — wrapper over RAGFlow (SDK when available, else HTTP) for connection, dataset management, upload, and parsing status.
+- [x] **Librarian Refactor:** Update `librarian/librarian.py` to include `sync_workspace()`:
   - Recursively scan the `workspace/` folder.
   - Upload new transcripts, docs, and code files to a RAGFlow "Dataset" via `rag_client`.
   - Trigger RAGFlow's "Deep Document Understanding" (DDU) parsing.
-  - Note: the existing `get_rag_passages()` stub (line 143) should be wired to the RAG client.
-- [ ] **RAG Tooling:** Create `agents/tools/` directory and `agents/tools/rag_search.py`, allowing agents to query RAGFlow datasets with similarity thresholds.
-- [ ] **Config Update:** Add RAGFlow connection settings to `config.py` (`ragflow_api_url`, `ragflow_api_key`) and `.env` placeholders.
-- [ ] **Test:** Create `tests/test_rag_client.py` — upload a single file, poll for parsing status, and return a search result.
+  - `get_rag_passages()` wired to RAG client (returns [] when RAG not configured).
+- [x] **RAG Tooling:** Create `agents/tools/` directory and `agents/tools/rag_search.py`, allowing agents to query RAGFlow datasets with similarity thresholds.
+- [x] **Config Update:** Add RAGFlow settings to `config.py` and `.env` placeholders.
+- [x] **Test:** Create `tests/test_rag_client.py` — client, sync_workspace, rag_search, get_rag_passages (mocked; no live RAGFlow required).
 
 ---
 

@@ -111,11 +111,15 @@ class TestLibrarian:
         assert "ATAM" in all_context
         assert "C4" in all_context
 
-    def test_rag_not_implemented(self):
-        """Test that RAG methods raise NotImplementedError."""
+    def test_get_rag_passages_returns_empty_when_rag_not_configured(self):
+        """When RAGFlow is not configured, get_rag_passages returns empty list."""
+        from config import settings
+        from unittest.mock import patch
+
         lib = Librarian()
-        with pytest.raises(NotImplementedError):
-            lib.get_rag_passages("test query", "discovery")
+        with patch.object(settings, "ragflow_api_key", ""):
+            result = lib.get_rag_passages("test query", "discovery")
+        assert result == []
 
 
 class TestLibrarianSingleton:

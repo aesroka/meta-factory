@@ -95,10 +95,33 @@ class Settings(BaseSettings):
         description="Maximum retries on API failure"
     )
 
+    # RAGFlow (Forge-Stream Phase 1)
+    ragflow_api_url: str = Field(
+        default="http://localhost:9380",
+        description="RAGFlow API base URL (e.g. http://localhost:9380)",
+    )
+    ragflow_api_key: str = Field(
+        default="",
+        description="RAGFlow API key for authentication",
+    )
+    ragflow_dataset_name: str = Field(
+        default="meta-factory-workspace",
+        description="Default dataset name for workspace sync",
+    )
+    ragflow_parse_poll_interval_sec: float = Field(
+        default=2.0,
+        description="Seconds between polling for document parse status",
+    )
+    ragflow_parse_timeout_sec: float = Field(
+        default=300.0,
+        description="Max seconds to wait for document parsing",
+    )
+
     model_config = {
         "env_prefix": "META_FACTORY_",
         "env_file": ".env",
         "env_file_encoding": "utf-8",
+        "extra": "ignore",  # ignore extra env vars (e.g. OPENAI_API_KEY) not in schema
     }
 
     def get_workspace_path(self) -> Path:
