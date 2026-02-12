@@ -346,7 +346,7 @@ pytest tests/test_miner_agent.py -v
 
 ---
 
-### Phase 4: Expert Synthesis (Dossier-Primed Pipeline)
+### Phase 4: Expert Synthesis (Dossier-Primed Pipeline) ✅
 
 *Goal: Expert (Tier 3) agents work from the Dossier, not raw content. The full Forge-Stream pipeline: cheap extraction → expensive synthesis.*
 
@@ -365,7 +365,7 @@ These are complementary, not redundant. The Dossier **replaces the raw transcrip
 
 #### 4.1 Dossier-to-transcript adapter
 
-- [ ] Create `contracts/adapters.py`:
+- [x] Create `contracts/adapters.py`:
 
 ```python
 from contracts import ProjectDossier, DiscoveryInput
@@ -411,7 +411,7 @@ def dossier_to_discovery_input(dossier: ProjectDossier) -> DiscoveryInput:
 
 #### 4.2 Dossier-first entry in GreenfieldSwarm
 
-- [ ] Add optional `dossier` parameter to `GreenfieldInput`:
+- [x] Add optional `dossier` parameter to `GreenfieldInput`:
 
 ```python
 class GreenfieldInput:
@@ -425,7 +425,7 @@ class GreenfieldInput:
         self.dossier = dossier
 ```
 
-- [ ] Modify `GreenfieldSwarm._run_discovery()`: if `input_data.dossier` is provided, use `dossier_to_discovery_input(input_data.dossier)` instead of building `DiscoveryInput` from `input_data.transcript`:
+- [x] Modify `GreenfieldSwarm._run_discovery()`: if `input_data.dossier` is provided, use `dossier_to_discovery_input(input_data.dossier)` instead of building `DiscoveryInput` from `input_data.transcript`:
 
 ```python
 def _run_discovery(self, input_data: GreenfieldInput) -> PainMonetizationMatrix:
@@ -447,7 +447,7 @@ def _run_discovery(self, input_data: GreenfieldInput) -> PainMonetizationMatrix:
 
 #### 4.3 Full Forge-Stream pipeline demo
 
-- [ ] Add `--mode full-dossier` to `scripts/rag_agent_demo.py`:
+- [x] Add `--mode full-dossier` to `scripts/rag_agent_demo.py`:
 
 ```python
 elif mode == "full-dossier":
@@ -473,7 +473,7 @@ Update the `--mode` choices to include `"full-dossier"`.
 
 #### 4.4 Cost comparison
 
-- [ ] Add `--compare` flag to demo that runs the same input through both pipelines:
+- [x] Add `--compare` flag to demo that runs the same input through both pipelines:
   1. **Raw path:** RAG transcript → Discovery → Architect → ... → Proposal (current `--mode full`)
   2. **Dossier path:** RAG → Miner → Dossier → Discovery → Architect → ... → Proposal (`--mode full-dossier`)
 
@@ -485,12 +485,12 @@ Update the `--mode` choices to include `"full-dossier"`.
 
 #### 4.5 Test
 
-- [ ] Create `tests/test_adapters.py`:
+- [x] Create `tests/test_adapters.py`:
   - `test_dossier_to_discovery_input_produces_valid_discovery_input`: Build a `ProjectDossier` with known fields, convert, verify `DiscoveryInput` has a `transcript` containing all stakeholder names, tech stack items, constraint requirements.
   - `test_empty_dossier_produces_minimal_transcript`: Dossier with empty lists → transcript still valid (just project name + summary).
   - `test_legacy_debt_included_only_when_present`: Verify `legacy_debt_summary` appears in transcript only when non-null.
 
-- [ ] Create `tests/test_dossier_pipeline.py`:
+- [x] Create `tests/test_dossier_pipeline.py`:
   - Mock agents. Pass `GreenfieldInput(dossier=sample_dossier)`. Verify Discovery receives structured transcript (not raw text). Verify rest of pipeline runs normally.
 
 ---

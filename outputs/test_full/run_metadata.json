@@ -1,0 +1,13 @@
+{
+  "run_id": "test_full",
+  "mode": "greenfield",
+  "started_at": "2026-02-12T14:03:01.778228",
+  "completed_at": "2026-02-12T14:03:01.779855",
+  "status": "error",
+  "token_usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_cost_usd": 0.0
+  },
+  "escalations": 0
+}

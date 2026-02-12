@@ -74,9 +74,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--mode",
-        choices=["discovery", "dossier", "full"],
+        choices=["discovery", "dossier", "full", "full-dossier"],
         default=None,
-        help="Mode: discovery (RAG → Discovery only), dossier (RAG → Miner → ProjectDossier), full (greenfield pipeline). Default: discovery unless --full.",
+        help="Mode: discovery (RAG → Discovery only), dossier (RAG → Miner → ProjectDossier), full (RAG → Greenfield), full-dossier (RAG → Miner → Dossier → Greenfield). Default: discovery unless --full.",
     )
     parser.add_argument(
         "--no-sync",
@@ -104,6 +104,11 @@ def main() -> None:
         "--model", "-m",
         default=None,
         help="Model name (e.g. gpt-4o, gemini-1.5-flash, deepseek-chat). Default depends on provider.",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Run both raw (full) and dossier (full-dossier) pipelines and print cost comparison.",
     )
     args = parser.parse_args()
 
@@ -164,10 +169,12 @@ def main() -> None:
         else:
             print("[WARN] RAGFlow client not available; RAG context may be empty.")
 
-    # --- Step 2: Build transcript from RAG retrieval (discovery/full) or note for dossier ---
+    # --- Step 2: Build transcript from RAG retrieval (discovery/full/compare) or note for dossier ---
     mode = args.mode or ("full" if args.full else "discovery")
+    if args.compare:
+        mode = "full"  # we run both; need transcript for raw path
     rag_transcript = ""
-    if mode == "dossier":
+    if mode in ("dossier", "full-dossier") and not args.compare:
         print("\n--- Step 2: RAG retrieval (MINER_RAG_QUERIES) will run inside IngestionSwarm ---")
     else:
         print("\n--- Step 2: Retrieve context from RAGFlow ---")
@@ -185,11 +192,101 @@ def main() -> None:
     # --- Step 3: Run agent(s) with RAG-sourced "transcript" ---
     print("\n--- Step 3: Run agent(s) with RAG-sourced input ---")
     print(f"Provider: {args.provider}" + (f", model: {args.model}" if args.model else ""))
-    if mode != "dossier":
+    if mode not in ("dossier", "full-dossier") and not args.compare:
         print("(The agent's 'transcript' is the context retrieved above from RAGFlow.)")
     print()
 
-    if mode == "full" or args.full:
+    if args.compare:
+        # Run both pipelines and print cost comparison
+        from providers.cost_logger import get_swarm_cost_logger
+        from swarms import IngestionSwarm, IngestionInput, GreenfieldSwarm, GreenfieldInput
+        from orchestrator.cost_controller import reset_cost_controller
+
+        reset_cost_controller(args.max_cost)
+        print("--- Compare: Run 1 (Raw: RAG transcript → Discovery → … → Proposal) ---")
+        manager = EngagementManager(
+            max_cost_usd=args.max_cost,
+            output_dir=REPO_ROOT / "outputs",
+            provider=args.provider,
+            model=args.model,
+        )
+        manager.run(
+            input_content=rag_transcript,
+            client_name=args.client,
+            force_mode=Mode.GREENFIELD,
+            provider=args.provider,
+            model=args.model,
+        )
+        cost_raw = get_swarm_cost_logger().total_cost
+        get_swarm_cost_logger().reset()
+        reset_cost_controller(args.max_cost)
+
+        print("\n--- Compare: Run 2 (Dossier: RAG → Miner → Dossier → Discovery → … → Proposal) ---")
+        ingestion = IngestionSwarm(
+            librarian=lib, run_id="compare_ingestion", provider=args.provider, model=args.model,
+        )
+        ingest_result = ingestion.execute(IngestionInput(client_name=args.client, dataset_id=dataset_id))
+        dossier = ingest_result.get("artifacts", {}).get("mining")
+        if dossier is None:
+            print("[ERROR] Ingestion did not produce a dossier for compare run.")
+            sys.exit(1)
+        swarm = GreenfieldSwarm(
+            librarian=lib, run_id="compare_greenfield", provider=args.provider, model=args.model,
+        )
+        swarm.execute(GreenfieldInput(client_name=args.client, dossier=dossier))
+        cost_dossier = get_swarm_cost_logger().total_cost
+
+        print("\n" + "=" * 60)
+        print("Cost comparison")
+        print("=" * 60)
+        print(f"  Raw path (transcript → full pipeline):    ${cost_raw:.4f}")
+        print(f"  Dossier path (Miner → Dossier → full):    ${cost_dossier:.4f}")
+        if cost_raw > 0:
+            pct = (1 - cost_dossier / cost_raw) * 100
+            print(f"  Savings (dossier vs raw):                 {pct:.1f}%")
+        print("=" * 60)
+    elif mode == "full-dossier":
+        # Full Forge-Stream: Ingestion → Dossier → Greenfield pipeline
+        from swarms import IngestionSwarm, IngestionInput, GreenfieldSwarm, GreenfieldInput
+        from orchestrator.cost_controller import reset_cost_controller
+        reset_cost_controller(args.max_cost)
+        print("--- Step 3a: Ingestion (Miner → ProjectDossier) ---")
+        ingestion = IngestionSwarm(
+            librarian=lib,
+            run_id="forge_stream_ingestion",
+            provider=args.provider,
+            model=args.model,
+        )
+        ingest_result = ingestion.execute(IngestionInput(client_name=args.client, dataset_id=dataset_id))
+        dossier = ingest_result.get("artifacts", {}).get("mining")
+        if dossier is None:
+            print("[ERROR] Ingestion did not produce a dossier.")
+            sys.exit(1)
+        print("--- Step 3b: Greenfield pipeline (Dossier → Discovery → … → Proposal) ---")
+        swarm = GreenfieldSwarm(
+            librarian=lib,
+            run_id="forge_stream_full",
+            provider=args.provider,
+            model=args.model,
+        )
+        try:
+            result = swarm.execute(GreenfieldInput(client_name=args.client, dossier=dossier))
+        except Exception as e:
+            print(f"[ERROR] Greenfield failed: {e}")
+            raise
+        status = result.get("status", "unknown")
+        print(f"\nRun status: {status}")
+        artifacts = result.get("artifacts", {})
+        if artifacts.get("proposal"):
+            doc = artifacts["proposal"]
+            if hasattr(doc, "model_dump"):
+                doc = doc.model_dump()
+            exec_summary = doc.get("executive_summary") or doc.get("summary")
+            if exec_summary:
+                text = exec_summary.get("narrative", str(exec_summary)) if isinstance(exec_summary, dict) else str(exec_summary)
+                print("\nProposal (excerpt):", text[:500] + "..." if len(text) > 500 else text)
+        print("\nArtifacts in:", result.get("output_path", "outputs/"))
+    elif mode == "full" or args.full:
         # Full greenfield pipeline (Discovery → Architect → … → Proposal)
         manager = EngagementManager(
             max_cost_usd=args.max_cost,

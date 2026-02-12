@@ -5,7 +5,7 @@ Discovery Agent → Critic → Architect Agent → Critic →
 Estimator Agent → Critic → Synthesis Agent → Proposal Agent → Critic → OUTPUT
 """
 
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, TYPE_CHECKING
 from datetime import datetime
 
 from swarms.base_swarm import BaseSwarm
@@ -30,21 +30,26 @@ from contracts import (
 )
 from librarian import Librarian
 
+if TYPE_CHECKING:
+    from contracts import ProjectDossier
+
 
 class GreenfieldInput:
     """Input for Greenfield swarm."""
 
     def __init__(
         self,
-        transcript: str,
-        client_name: str,
+        transcript: str = "",
+        client_name: str = "",
         context: Optional[str] = None,
         quality_priorities: Optional[list[str]] = None,
+        dossier: Optional["ProjectDossier"] = None,
     ):
         self.transcript = transcript
         self.client_name = client_name
         self.context = context
         self.quality_priorities = quality_priorities
+        self.dossier = dossier
 
 
 class GreenfieldSwarm(BaseSwarm):
@@ -104,16 +109,20 @@ class GreenfieldSwarm(BaseSwarm):
             return self._finalize_run("error")
 
     def _run_discovery(self, input_data: GreenfieldInput) -> PainMonetizationMatrix:
-        """Run the discovery stage."""
+        """Run the discovery stage. If dossier is provided, use it as structured input for Discovery."""
         agent = DiscoveryAgent(
             librarian=self.librarian,
             provider=self.provider,
             model=self.model,
         )
-        agent_input = DiscoveryInput(
-            transcript=input_data.transcript,
-            context=input_data.context,
-        )
+        if input_data.dossier is not None:
+            from contracts.adapters import dossier_to_discovery_input
+            agent_input = dossier_to_discovery_input(input_data.dossier)
+        else:
+            agent_input = DiscoveryInput(
+                transcript=input_data.transcript,
+                context=input_data.context,
+            )
 
         output, passed, escalation = self.run_with_critique(
             agent=agent,
