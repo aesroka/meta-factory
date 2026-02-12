@@ -1,0 +1,125 @@
+{
+  "utility_tree": {
+    "scenarios": [
+      {
+        "attribute": "Performance",
+        "scenario": "Drivers receive real-time manifest updates within 5 seconds of changes.",
+        "importance": "H",
+        "difficulty": "H",
+        "stimulus": "Route changes are made in the backend system.",
+        "response": "Drivers' applications update their manifests instantly.",
+        "response_measure": "Response time is monitored to ensure updates occur within 5 seconds."
+      },
+      {
+        "attribute": "Usability",
+        "scenario": "The application allows drivers to access live updates without requiring a manual refresh.",
+        "importance": "H",
+        "difficulty": "H",
+        "stimulus": "Drivers start their application while on the route.",
+        "response": "The application displays the latest manifest automatically.",
+        "response_measure": "95% of drivers report receiving updates without manual refresh."
+      },
+      {
+        "attribute": "Availability",
+        "scenario": "The system can handle 1000 simultaneous connections for real-time updates.",
+        "importance": "H",
+        "difficulty": "H",
+        "stimulus": "Drivers log in to the application during morning rush hours.",
+        "response": "All drivers remain connected and receive updates without interruptions.",
+        "response_measure": "Uptime is monitored to ensure availability above 99.9%."
+      },
+      {
+        "attribute": "Scalability",
+        "scenario": "The system scales to support real-time updates as the number of drivers increases.",
+        "importance": "H",
+        "difficulty": "H",
+        "stimulus": "Additional drivers are deployed during peak season.",
+        "response": "The system continues to provide real-time updates without any degradation in performance.",
+        "response_measure": "System performance is monitored during peak load times."
+      }
+    ]
+  },
+  "decisions": [
+    {
+      "decision": "Implement WebSocket for real-time manifest updates.",
+      "context": "The existing system method is a periodic fetch, leading to delays in manifest updates.",
+      "pattern_used": "Message Channel",
+      "eip_reference": "WebSocket for real-time updates",
+      "trade_off": "Improves real-time response but increases complexity in handling message states.",
+      "alternatives_considered": [
+        "Polling based updates",
+        "Long polling techniques"
+      ],
+      "failure_modes": [
+        {
+          "description": "WebSocket connection drops unexpectedly.",
+          "likelihood": "likely",
+          "impact": "moderate",
+          "mitigation": "Implement reconnection strategies and fallback to polling."
+        },
+        {
+          "description": "Latency spikes due to increased message traffic.",
+          "likelihood": "possible",
+          "impact": "severe",
+          "mitigation": "Monitor performance and optimize message handling logic."
+        }
+      ]
+    },
+    {
+      "decision": "Utilize push notifications for offline support to keep drivers updated.",
+      "context": "Drivers may encounter areas with no internet, yet need updates.",
+      "pattern_used": "Message Dispatcher",
+      "eip_reference": "Push Notification",
+      "trade_off": "Ensures updates during downtime but adds complexity in managing message states.",
+      "alternatives_considered": [
+        "Offline data storage without push notifications"
+      ],
+      "failure_modes": [
+        {
+          "description": "Push notifications fail to be sent when drivers regain connectivity.",
+          "likelihood": "possible",
+          "impact": "moderate",
+          "mitigation": "Queue notifications during offline periods and dispatch on reconnect."
+        },
+        {
+          "description": "Data synchronization issues upon reconnection.",
+          "likelihood": "possible",
+          "impact": "severe",
+          "mitigation": "Implement conflict resolution strategies."
+        }
+      ]
+    }
+  ],
+  "trade_off_analysis": {
+    "options": [
+      "Real-time Updates with WebSocket",
+      "Static Updates with Manual Refresh"
+    ],
+    "criteria": [
+      "Responsiveness",
+      "Complexity",
+      "Scalability",
+      "User Satisfaction"
+    ],
+    "scores": [
+      [
+        5,
+        3,
+        5,
+        5
+      ],
+      [
+        2,
+        4,
+        2,
+        2
+      ]
+    ],
+    "recommendation": "Adopt WebSocket implementation because it maximizes responsiveness and user satisfaction while still being scalable."
+  },
+  "integration_patterns": [
+    "Message Channel",
+    "Push Notification"
+  ],
+  "component_diagram": null
+}

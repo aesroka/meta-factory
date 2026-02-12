@@ -1,0 +1,13 @@
+{
+  "run_id": "showcase_forge_stream",
+  "mode": "greenfield",
+  "started_at": "2026-02-12T14:31:41.843517",
+  "completed_at": "2026-02-12T14:32:59.684591",
+  "status": "error",
+  "token_usage": {
+    "input_tokens": 47167,
+    "output_tokens": 6684,
+    "total_cost_usd": 0.241761
+  },
+  "escalations": 1
+}

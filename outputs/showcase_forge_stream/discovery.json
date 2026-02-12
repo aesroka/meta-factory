@@ -1,0 +1,56 @@
+{
+  "pain_points": [
+    {
+      "description": "Drivers are still reliant on paper manifests which need to be reprinted with every route change, leading to potential confusion.",
+      "frequency": "daily",
+      "cost_per_incident": null,
+      "annual_cost": null,
+      "source_quote": "paper manifests printed daily; route changes require reprint and drivers sometimes leave before updates.",
+      "confidence": 1.0
+    },
+    {
+      "description": "The application currently assumes a fixed manifest at login, preventing real-time updates for drivers.",
+      "frequency": "daily",
+      "cost_per_incident": null,
+      "annual_cost": null,
+      "source_quote": "app assumes fixed manifest at login; no refresh.",
+      "confidence": 1.0
+    },
+    {
+      "description": "There is a lack of real-time updates due to the absence of WebSocket or push notifications, hindering drivers' ability to receive immediate route changes.",
+      "frequency": "daily",
+      "cost_per_incident": null,
+      "annual_cost": null,
+      "source_quote": "no WebSocket/push for live manifest updates.",
+      "confidence": 1.0
+    }
+  ],
+  "stakeholder_needs": [
+    {
+      "role": "Product",
+      "need": "Eliminate paper manifests and ensure real-time updates for compliance and audit purposes.",
+      "priority": "critical"
+    },
+    {
+      "role": "Engineering",
+      "need": "Implement dynamic refresh capabilities for the manifest and ensure offline support.",
+      "priority": "high"
+    },
+    {
+      "role": "Consultant",
+      "need": "Reduce errors stemming from paper-based processes by transitioning to digital solutions.",
+      "priority": "high"
+    }
+  ],
+  "total_annual_cost_of_pain": null,
+  "key_constraints": [
+    "Mobile: Real-time manifest updates",
+    "Compliance: Digital records for auditors",
+    "Backend: WebSocket or push channel for manifest stream"
+  ],
+  "recommended_next_steps": [
+    "Discuss further with the engineering team on the feasibility of implementing WebSocket.",
+    "Evaluate potential solutions for dynamic manifest refresh and offline capabilities.",
+    "Explore options to gather quantifiable costs associated with paper manifest printing."
+  ]
+}
