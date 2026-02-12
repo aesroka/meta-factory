@@ -133,7 +133,12 @@ Produce a complete ProposalDocument with:
 8. Investment section
 """
 
-    def __init__(self, librarian: Optional[Librarian] = None, model: Optional[str] = None):
+    def __init__(
+        self,
+        librarian: Optional[Librarian] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+    ):
         """Initialize the Proposal Agent."""
         super().__init__(
             role="proposal",
@@ -141,6 +146,7 @@ Produce a complete ProposalDocument with:
             output_schema=ProposalDocument,
             librarian=librarian,
             model=model,
+            provider=provider,
         )
 
     def get_task_description(self) -> str:

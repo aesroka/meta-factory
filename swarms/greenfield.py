@@ -225,7 +225,7 @@ class GreenfieldSwarm(BaseSwarm):
         # Save artifacts
         output_path = self.save_artifacts()
 
-        return {
+        result = {
             "run_id": self.run.run_id,
             "status": status,
             "output_path": output_path,
@@ -237,3 +237,6 @@ class GreenfieldSwarm(BaseSwarm):
                 "cost_usd": self.run.token_usage.total_cost,
             },
         }
+        if self.run.error is not None:
+            result["error"] = self.run.error or "Unknown error"
+        return result

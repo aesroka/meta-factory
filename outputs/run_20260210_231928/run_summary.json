@@ -1,0 +1,17 @@
+{
+  "run_id": "run_20260210_231928",
+  "mode": "greenfield",
+  "status": "error",
+  "started_at": "2026-02-10T23:19:28.245661",
+  "completed_at": "2026-02-10T23:21:16.754698",
+  "duration_seconds": 108.51,
+  "token_usage": {
+    "input_tokens": 51532,
+    "output_tokens": 8669,
+    "cost_usd": 0.28463099999999997
+  },
+  "escalation_count": 1,
+  "artifacts_produced": [
+    "discovery"
+  ]
+}

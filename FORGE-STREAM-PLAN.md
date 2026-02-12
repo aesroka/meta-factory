@@ -96,13 +96,13 @@ These are hard-won from debugging. **Read before touching RAGFlow code.**
 
 #### 2.1 Add LiteLLM dependency
 
-- [ ] Add `litellm>=1.40.0` to `requirements.txt`.
-- [ ] `pip install litellm` in the venv.
-- [ ] Verify: `python -c "import litellm; print(litellm.__version__)"`.
+- [x] Add `litellm>=1.40.0` to `requirements.txt`.
+- [x] `pip install litellm` in the venv.
+- [x] Verify: LiteLLM imports and demo runs.
 
 #### 2.2 Replace providers/ with a single LiteLLM provider
 
-- [ ] Create `providers/litellm_provider.py` — a single class that wraps `litellm.completion()`:
+- [x] Create `providers/litellm_provider.py` — a single class that wraps `litellm.completion()`:
   ```python
   class LiteLLMProvider(LLMProvider):
       def complete(self, system_prompt, user_message, model=None, max_tokens=4096):
@@ -124,16 +124,10 @@ These are hard-won from debugging. **Read before touching RAGFlow code.**
               cost=response._hidden_params.get("response_cost", 0),
           )
   ```
-- [ ] Add `cost: float = 0.0` field to `LLMResponse` in `providers/base.py`.
-- [ ] Update `providers/factory.py`: `get_provider()` should return `LiteLLMProvider` for all providers. Keep the function signature (`provider_name`, `model`) but map to LiteLLM model strings internally:
-  ```python
-  def get_provider(provider_name=None, model=None) -> LLMProvider:
-      litellm_model = _to_litellm_model(provider_name, model)
-      return LiteLLMProvider(default_model=litellm_model)
-  ```
-  Where `_to_litellm_model("gemini", "gemini-2.0-flash")` → `"gemini/gemini-2.0-flash"`, and `_to_litellm_model("openai", "gpt-4o")` → `"gpt-4o"`.
-- [ ] **Do not delete** the old provider files yet. Keep them but unused — we can clean up once everything works.
-- [ ] **Nothing else changes.** `BaseAgent` still calls `self.llm_provider.complete()`. The interface is identical.
+- [x] Add `cost: float = 0.0` field to `LLMResponse` in `providers/base.py`.
+- [x] Update `providers/factory.py`: `get_provider()` returns `LiteLLMProvider` with `_to_litellm_model(provider_name, model)`.
+- [x] **Do not delete** the old provider files. Kept for reference.
+- [x] **Nothing else changes.** `BaseAgent` still calls `self.llm_provider.complete()`. Interface identical.
 
 #### 2.3 Set up cost tracking callback
 

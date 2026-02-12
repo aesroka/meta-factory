@@ -2,6 +2,7 @@
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
 python-dotenv>=1.0.0   # load .env into os.environ for API key fallbacks
+litellm>=1.40.0        # Phase 2: unified LLM layer, cost tracking, tiers
 
 # LLM Providers (install what you need)
 anthropic>=0.18.0          # Claude (default)

@@ -1,0 +1,8 @@
+[
+  {
+    "artifact_type": "dict",
+    "reason": "Max critic iterations reached with unresolved objections",
+    "suggested_resolution": "Manual review required for discovery",
+    "objection_count": 8
+  }
+]

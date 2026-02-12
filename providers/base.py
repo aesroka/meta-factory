@@ -13,6 +13,7 @@ class LLMResponse:
     output_tokens: int
     model: str
     provider: str
+    cost: float = 0.0
 
 
 class LLMProvider(ABC):

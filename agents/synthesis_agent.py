@@ -111,15 +111,20 @@ Produce a complete EngagementSummary with:
 8. Clear out-of-scope items
 """
 
-    def __init__(self, librarian: Optional[Librarian] = None, model: Optional[str] = None):
+    def __init__(
+        self,
+        librarian: Optional[Librarian] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+    ):
         """Initialize the Synthesis Agent."""
-        # Synthesis uses proposal frameworks for communication
         super().__init__(
             role="proposal",  # Uses Minto/SCQA frameworks
             system_prompt=self.SYSTEM_PROMPT,
             output_schema=EngagementSummary,
             librarian=librarian,
             model=model,
+            provider=provider,
         )
 
     def get_task_description(self) -> str:

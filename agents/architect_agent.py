@@ -113,7 +113,12 @@ Produce a complete ArchitectureResult with:
 5. Optional component diagram
 """
 
-    def __init__(self, librarian: Optional[Librarian] = None, model: Optional[str] = None):
+    def __init__(
+        self,
+        librarian: Optional[Librarian] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+    ):
         """Initialize the Architect Agent."""
         super().__init__(
             role="architect",
@@ -121,6 +126,7 @@ Produce a complete ArchitectureResult with:
             output_schema=ArchitectureResult,
             librarian=librarian,
             model=model,
+            provider=provider,
         )
 
     def get_task_description(self) -> str:

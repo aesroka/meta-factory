@@ -124,7 +124,12 @@ When reference projects are provided:
 - Validate math: E = (O + 4M + P) / 6, SD = (P - O) / 6
 """
 
-    def __init__(self, librarian: Optional[Librarian] = None, model: Optional[str] = None):
+    def __init__(
+        self,
+        librarian: Optional[Librarian] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+    ):
         """Initialize the Estimator Agent."""
         super().__init__(
             role="estimator",
@@ -132,6 +137,7 @@ When reference projects are provided:
             output_schema=EstimationResult,
             librarian=librarian,
             model=model,
+            provider=provider,
         )
 
     def get_task_description(self) -> str:
