@@ -73,6 +73,12 @@ def main() -> None:
         help="Run full greenfield pipeline (Discovery → … → Proposal). Default: Discovery only.",
     )
     parser.add_argument(
+        "--mode",
+        choices=["discovery", "dossier", "full"],
+        default=None,
+        help="Mode: discovery (RAG → Discovery only), dossier (RAG → Miner → ProjectDossier), full (greenfield pipeline). Default: discovery unless --full.",
+    )
+    parser.add_argument(
         "--no-sync",
         action="store_true",
         help="Skip workspace sync; use existing RAGFlow dataset (must have been synced earlier).",
@@ -158,25 +164,32 @@ def main() -> None:
         else:
             print("[WARN] RAGFlow client not available; RAG context may be empty.")
 
-    # --- Step 2: Build transcript from RAG retrieval ---
-    print("\n--- Step 2: Retrieve context from RAGFlow ---")
-    rag_transcript = build_rag_transcript(rag_search, dataset_id, top_k=5)
-    if not rag_transcript:
-        print("[WARN] No RAG chunks returned. Check RAGFlow embedding model and dataset.")
-        print("Using a short placeholder so the agent still runs.")
-        rag_transcript = (
-            "No workspace content was retrieved from RAG. "
-            "Ensure workspace is synced and retrieval returns chunks."
-        )
+    # --- Step 2: Build transcript from RAG retrieval (discovery/full) or note for dossier ---
+    mode = args.mode or ("full" if args.full else "discovery")
+    rag_transcript = ""
+    if mode == "dossier":
+        print("\n--- Step 2: RAG retrieval (MINER_RAG_QUERIES) will run inside IngestionSwarm ---")
     else:
-        print(f"Built transcript from {len(RAG_QUERIES)} RAG queries ({len(rag_transcript)} chars).")
+        print("\n--- Step 2: Retrieve context from RAGFlow ---")
+        rag_transcript = build_rag_transcript(rag_search, dataset_id, top_k=5)
+        if not rag_transcript:
+            print("[WARN] No RAG chunks returned. Check RAGFlow embedding model and dataset.")
+            print("Using a short placeholder so the agent still runs.")
+            rag_transcript = (
+                "No workspace content was retrieved from RAG. "
+                "Ensure workspace is synced and retrieval returns chunks."
+            )
+        else:
+            print(f"Built transcript from {len(RAG_QUERIES)} RAG queries ({len(rag_transcript)} chars).")
 
     # --- Step 3: Run agent(s) with RAG-sourced "transcript" ---
     print("\n--- Step 3: Run agent(s) with RAG-sourced input ---")
     print(f"Provider: {args.provider}" + (f", model: {args.model}" if args.model else ""))
-    print("(The agent's 'transcript' is the context retrieved above from RAGFlow.)\n")
+    if mode != "dossier":
+        print("(The agent's 'transcript' is the context retrieved above from RAGFlow.)")
+    print()
 
-    if args.full:
+    if mode == "full" or args.full:
         # Full greenfield pipeline (Discovery → Architect → … → Proposal)
         manager = EngagementManager(
             max_cost_usd=args.max_cost,
@@ -208,6 +221,33 @@ def main() -> None:
                 text = exec_summary.get("narrative", str(exec_summary)) if isinstance(exec_summary, dict) else str(exec_summary)
                 print(text[:800] + "..." if len(text) > 800 else text)
         print("\nFull artifacts in:", result.get("output_dir", "outputs/"))
+    elif mode == "dossier":
+        # Ingestion: RAG (MINER_RAG_QUERIES) → MinerAgent → Critic → ProjectDossier
+        from swarms import IngestionSwarm, IngestionInput
+        from orchestrator.cost_controller import reset_cost_controller
+        reset_cost_controller(args.max_cost)
+        swarm = IngestionSwarm(
+            librarian=lib,
+            run_id="dossier_demo",
+            provider=args.provider,
+            model=args.model,
+        )
+        try:
+            result = swarm.execute(IngestionInput(client_name=args.client, dataset_id=dataset_id, mode=None))
+        except Exception as e:
+            print(f"[ERROR] Ingestion failed: {e}")
+            raise
+        status = result.get("status", "unknown")
+        print(f"\nRun status: {status}")
+        artifacts = result.get("artifacts", {})
+        dossier = artifacts.get("mining")
+        if dossier is not None:
+            print("\nProjectDossier (from Miner + Critic):")
+            if hasattr(dossier, "model_dump"):
+                print(json.dumps(dossier.model_dump(), indent=2, default=str))
+            else:
+                print(json.dumps(dossier, indent=2, default=str))
+        print("\nArtifacts saved to:", result.get("output_path", "outputs/"))
     else:
         # Discovery only: run Discovery agent with RAG transcript (fast, cheap)
         from swarms import GreenfieldSwarm, GreenfieldInput

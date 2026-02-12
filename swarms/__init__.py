@@ -7,6 +7,7 @@ from .base_swarm import BaseSwarm, SwarmRun
 from .greenfield import GreenfieldSwarm, GreenfieldInput
 from .brownfield import BrownfieldSwarm, BrownfieldInput
 from .greyfield import GreyfieldSwarm, GreyfieldInput
+from .ingestion_swarm import IngestionSwarm, IngestionInput
 
 __all__ = [
     "BaseSwarm",
@@ -17,4 +18,6 @@ __all__ = [
     "BrownfieldInput",
     "GreyfieldSwarm",
     "GreyfieldInput",
+    "IngestionSwarm",
+    "IngestionInput",
 ]

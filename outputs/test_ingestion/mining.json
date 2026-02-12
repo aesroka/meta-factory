@@ -1,0 +1,11 @@
+{
+  "project_name": "TestClient",
+  "summary": "Summary one. Summary two.",
+  "stakeholders": [],
+  "tech_stack_detected": [
+    "Python"
+  ],
+  "constraints": [],
+  "logic_flows": [],
+  "legacy_debt_summary": null
+}

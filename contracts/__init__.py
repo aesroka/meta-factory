@@ -66,6 +66,7 @@ from .proposal_contracts import (
 )
 
 from .project import (
+    MinerInput,
     Stakeholder,
     TechConstraint,
     CoreLogicFlow,
@@ -122,6 +123,7 @@ __all__ = [
     "EngagementSummary",
     "ProposalDocument",
     # Project (Forge-Stream Dossier)
+    "MinerInput",
     "Stakeholder",
     "TechConstraint",
     "CoreLogicFlow",

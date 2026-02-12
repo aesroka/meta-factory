@@ -8,6 +8,14 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 
+class MinerInput(BaseModel):
+    """Input for the Miner Agent."""
+
+    rag_context: str = Field(..., description="Concatenated RAG chunks, grouped by query")
+    client_name: str = Field(..., description="Client or project name")
+    mode: Optional[str] = Field(None, description="greenfield, brownfield, or greyfield")
+
+
 class Stakeholder(BaseModel):
     """Stakeholder extracted from project materials."""
 

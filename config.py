@@ -169,6 +169,7 @@ class Settings(BaseSettings):
 # Agent-to-Bible mapping
 AGENT_BIBLE_MAPPING: Dict[str, List[str]] = {
     "discovery": ["mom_test.md", "spin_selling.md"],
+    "miner": ["mom_test.md", "spin_selling.md"],
     "legacy": ["legacy_code_feathers.md", "c4_model.md", "refactoring_fowler.md"],
     "architect": ["eip_hohpe.md", "atam.md"],
     "estimator": ["mcconnell_estimation.md"],

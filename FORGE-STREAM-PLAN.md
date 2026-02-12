@@ -30,20 +30,24 @@ These are the actual file paths and conventions in the existing repo.
 | Cost logger | `providers/cost_logger.py` — `SwarmCostLogger` (LiteLLM `CustomLogger` callback), singleton via `get_swarm_cost_logger()` |
 | Tier router | `providers/router.py` — `get_router()` returns singleton `litellm.Router` with tier1/tier2/tier3 model aliases |
 | Cost controller | `orchestrator/cost_controller.py` — thin reporting layer, reads from `SwarmCostLogger`, sets `litellm.max_budget` |
+| Miner agent | `agents/miner_agent.py` — tier1, extracts `ProjectDossier` from RAG context. Also defines `MINER_RAG_QUERIES` (6 queries). |
+| Ingestion swarm | `swarms/ingestion_swarm.py` — `IngestionSwarm` + `IngestionInput`. RAG retrieval → MinerAgent → Critic → `ProjectDossier`. |
 | Critic agent | `agents/critic_agent.py` — hardcodes `tier: "tier2"` via `set_metadata()` (no class-level `DEFAULT_TIER`) |
 | Base agent | `agents/base_agent.py` — `__init__` reads `DEFAULT_TIER` from class, sets metadata, resolves model via tier or explicit |
 | Critic loop | `swarms/base_swarm.py` `run_with_critique()` — catches `BudgetExceededError`, sequential review, enriched re-run |
+| Contracts | `contracts/project.py` — `ProjectDossier`, `MinerInput`, `Stakeholder`, `TechConstraint`, `CoreLogicFlow` |
 | RAG client | `librarian/rag_client.py` — HTTP client for RAGFlow API |
 | RAG search tool | `agents/tools/rag_search.py` — `rag_search(query, dataset_id, top_k)` |
 | Config | `config.py` — pydantic-settings, `META_FACTORY_` prefix, `.env` loaded at import |
 | Critic score scale | **0.0–1.0**, pass threshold `0.7` (`config.py: critic_pass_score`) |
-| Demo scripts | `scripts/rag_demo.py` (RAG only), `scripts/rag_agent_demo.py` (RAG + agent pipeline) |
+| Demo scripts | `scripts/rag_demo.py` (RAG only), `scripts/rag_agent_demo.py` (RAG + agents, supports `--mode discovery\|dossier\|full`) |
 | Legacy providers | `providers/anthropic_provider.py`, `openai_provider.py`, `gemini_provider.py` — **unused, kept for reference** |
 
 ### Agent tier assignments
 
 | Agent | `DEFAULT_TIER` | File |
 |-------|---------------|------|
+| `MinerAgent` | `tier1` | `agents/miner_agent.py:51` |
 | `DiscoveryAgent` | `tier1` | `agents/discovery_agent.py:81` |
 | `CriticAgent` | `tier2` (via `set_metadata`) | `agents/critic_agent.py:95` |
 | `ArchitectAgent` | `tier3` | `agents/architect_agent.py:116` |
@@ -130,13 +134,13 @@ These are hard-won from debugging. **Read before touching RAGFlow code.**
 
 ---
 
-### Phase 3: The "Miner" Swarm (Compaction)
+### Phase 3: The "Miner" Swarm (Compaction) ✅
 
 *Goal: Turn RAG chunks into a structured `ProjectDossier` JSON using Tier 1 models. The Dossier becomes the compressed, validated input for all downstream agents.*
 
 #### 3.1 Define `MinerInput` contract
 
-- [ ] Add to `contracts/project.py`:
+- [x] Add to `contracts/project.py`:
   ```python
   class MinerInput(BaseModel):
       """Input for the Miner Agent."""
@@ -144,13 +148,13 @@ These are hard-won from debugging. **Read before touching RAGFlow code.**
       client_name: str = Field(..., description="Client or project name")
       mode: Optional[str] = Field(None, description="greenfield, brownfield, or greyfield")
   ```
-- [ ] Export `MinerInput` from `contracts/__init__.py`.
+- [x] Export `MinerInput` from `contracts/__init__.py`.
 
 **Why a separate contract:** `DiscoveryInput` has `transcript` + `context` + `focus_areas`. The Miner's input is different — it's pre-structured RAG context, not a raw transcript. Keeping them separate makes the pipeline data flow explicit.
 
 #### 3.2 Create the Miner Agent
 
-- [ ] Create `agents/miner_agent.py`. Follow the `DiscoveryAgent` pattern exactly:
+- [x] Create `agents/miner_agent.py`. Follow the `DiscoveryAgent` pattern exactly:
 
 ```python
 class MinerAgent(BaseAgent):
@@ -176,7 +180,7 @@ class MinerAgent(BaseAgent):
         return result.output
 ```
 
-- [ ] Register in `agents/__init__.py`.
+- [x] Register in `agents/__init__.py`.
 
 **Miner system prompt** (must be concise for tier1):
 
@@ -203,7 +207,7 @@ and produce a structured ProjectDossier JSON.
 
 #### 3.3 Define RAG queries mapped to Dossier fields
 
-- [ ] Create `MINER_RAG_QUERIES` in `agents/miner_agent.py` (or a shared location):
+- [x] Create `MINER_RAG_QUERIES` in `agents/miner_agent.py` (or a shared location):
 
 ```python
 MINER_RAG_QUERIES = [
@@ -228,7 +232,7 @@ Each query targets 1-2 specific Dossier fields. The Miner sees all results conca
 
 #### 3.4 Create the Ingestion Swarm
 
-- [ ] Create `swarms/ingestion_swarm.py`:
+- [x] Create `swarms/ingestion_swarm.py`:
 
 ```python
 class IngestionInput:
@@ -275,7 +279,7 @@ class IngestionSwarm(BaseSwarm):
         return output
 ```
 
-- [ ] Register `IngestionSwarm` and `IngestionInput` in `swarms/__init__.py`.
+- [x] Register `IngestionSwarm` and `IngestionInput` in `swarms/__init__.py`.
 
 **Key decisions:**
 - The swarm owns RAG retrieval (Step 1) and agent execution (Step 2). The agent itself does NOT call `rag_search()` — it receives pre-fetched context. This keeps the agent pure (input → output) and testable without RAGFlow.
@@ -298,7 +302,7 @@ No additional error handling needed beyond what `BaseAgent` provides. The key is
 
 #### 3.6 Demo integration
 
-- [ ] Add `--mode dossier` to `scripts/rag_agent_demo.py`:
+- [x] Add `--mode dossier` to `scripts/rag_agent_demo.py`:
 
 ```python
 if args.mode == "dossier":
@@ -312,7 +316,7 @@ This runs: RAGFlow sync → RAG retrieval (MINER_RAG_QUERIES) → MinerAgent →
 
 #### 3.7 Test
 
-- [ ] Create `tests/test_miner_agent.py`:
+- [x] Create `tests/test_miner_agent.py`:
 
   **Test 1: Valid extraction.** Mock `litellm.completion` to return a valid `ProjectDossier` JSON string. Verify `MinerAgent.extract()` returns a validated `ProjectDossier` with correct fields.
 
@@ -324,7 +328,7 @@ This runs: RAGFlow sync → RAG retrieval (MINER_RAG_QUERIES) → MinerAgent →
 
   **Test 5: `_to_litellm_model` respects tier.** Verify that `MinerAgent` with no explicit model uses `DEFAULT_TIER = "tier1"`.
 
-- [ ] Create `tests/test_ingestion_swarm.py`:
+- [x] Create `tests/test_ingestion_swarm.py`:
 
   **Test 1: Full pipeline.** Mock `rag_search` to return canned chunks, mock `litellm.completion` for both Miner and Critic. Verify `execute()` returns `status: "completed"` and `artifacts["mining"]` is a valid `ProjectDossier`.
 
@@ -344,7 +348,7 @@ pytest tests/test_miner_agent.py -v
 
 ### Phase 4: Expert Synthesis (Dossier-Primed Pipeline)
 
-*Goal: Expert (Tier 3) agents work from the Dossier, not raw content. Targeted RAG only when needed.*
+*Goal: Expert (Tier 3) agents work from the Dossier, not raw content. The full Forge-Stream pipeline: cheap extraction → expensive synthesis.*
 
 #### Design decision: Dossier replaces transcript, not Discovery
 
@@ -357,30 +361,137 @@ The `ProjectDossier` and `PainMonetizationMatrix` serve different purposes:
 | **Produced by** | Miner (tier1) | Discovery (tier1) |
 | **Has monetization data?** | No | Yes (cost_per_incident, annual_cost) |
 
-These are complementary, not redundant. The Dossier can **replace the raw transcript** as input to Discovery — making Discovery faster and cheaper because it works from structured facts instead of messy text. But Discovery still does the analytical work (identify pain, monetize, prioritize).
+These are complementary, not redundant. The Dossier **replaces the raw transcript** as input to Discovery — making Discovery faster and cheaper because it works from structured facts instead of messy text. Discovery still does the analytical work (identify pain, monetize, prioritize).
 
-- [ ] **4.1 Dossier-to-transcript adapter.** Create `contracts/adapters.py` with:
-  ```python
-  def dossier_to_discovery_input(dossier: ProjectDossier) -> DiscoveryInput:
-      """Convert a ProjectDossier to a structured transcript for Discovery."""
-      # Format dossier fields as a clean "transcript" string
-      # Discovery agent reads this instead of raw text
-  ```
+#### 4.1 Dossier-to-transcript adapter
 
-- [ ] **4.2 Dossier-first entry point.** Modify `GreenfieldSwarm.execute()` to accept `dossier: ProjectDossier = None`. When provided:
-  - Run Discovery with `dossier_to_discovery_input(dossier)` instead of raw transcript.
-  - Discovery still produces `PainMonetizationMatrix` — but from structured input, so it's cheaper and more accurate.
-  - Rest of pipeline (Architect → Estimator → Proposal) unchanged.
+- [ ] Create `contracts/adapters.py`:
 
-- [ ] **4.3 Integrated pipeline.** Add `--mode full-dossier` to demo:
-  - Step 1: Ingestion Swarm → `ProjectDossier` (tier1)
-  - Step 2: Dossier → Discovery → PainMatrix (tier1, from structured input)
-  - Step 3: PainMatrix → Architect → Estimator → Proposal (tier3)
-  - This is the full Forge-Stream pipeline: cheap extraction, expensive synthesis.
+```python
+from contracts import ProjectDossier, DiscoveryInput
 
-- [ ] **4.4 Cost comparison.** Add `--compare` flag to demo that runs the same input twice: raw transcript path vs Dossier-primed path. Print cost side-by-side from `SwarmCostLogger`. Target: **>30% cheaper** for the Dossier path (the savings come from Discovery processing structured input instead of raw text).
+def dossier_to_discovery_input(dossier: ProjectDossier) -> DiscoveryInput:
+    """Format a ProjectDossier as a structured transcript for Discovery.
 
-- [ ] **4.5 Test.** `tests/test_dossier_pipeline.py` — mock agents, verify `dossier_to_discovery_input()` produces valid `DiscoveryInput`, verify Discovery receives structured input when Dossier is provided.
+    Discovery expects a DiscoveryInput with a `transcript` string.
+    We render the Dossier's structured fields as a readable document
+    so Discovery can analyze it for pain points, monetization, etc.
+    """
+    sections = [f"# Project: {dossier.project_name}\n\n{dossier.summary}"]
+
+    if dossier.stakeholders:
+        lines = ["## Stakeholders"]
+        for s in dossier.stakeholders:
+            concerns = ", ".join(s.concerns) if s.concerns else "none stated"
+            lines.append(f"- **{s.name}** ({s.role}): {concerns}")
+        sections.append("\n".join(lines))
+
+    if dossier.tech_stack_detected:
+        sections.append("## Tech Stack\n" + ", ".join(dossier.tech_stack_detected))
+
+    if dossier.constraints:
+        lines = ["## Constraints"]
+        for c in dossier.constraints:
+            lines.append(f"- [{c.priority}] {c.category}: {c.requirement}")
+        sections.append("\n".join(lines))
+
+    if dossier.logic_flows:
+        lines = ["## Core Flows"]
+        for f in dossier.logic_flows:
+            lines.append(f"- **Trigger:** {f.trigger} → **Process:** {f.process} → **Outcome:** {f.outcome}")
+        sections.append("\n".join(lines))
+
+    if dossier.legacy_debt_summary:
+        sections.append(f"## Legacy / Tech Debt\n{dossier.legacy_debt_summary}")
+
+    return DiscoveryInput(transcript="\n\n".join(sections))
+```
+
+**Why render as markdown, not pass raw JSON:** Discovery's system prompt is written for natural-language transcripts. A readable rendering of the Dossier matches Discovery's expected input format. If we passed raw JSON, Discovery would spend tokens parsing structure instead of analyzing content.
+
+#### 4.2 Dossier-first entry in GreenfieldSwarm
+
+- [ ] Add optional `dossier` parameter to `GreenfieldInput`:
+
+```python
+class GreenfieldInput:
+    def __init__(self, transcript: str = "", client_name: str = "",
+                 context: str = None, quality_priorities: list[str] = None,
+                 dossier: ProjectDossier = None):
+        self.transcript = transcript
+        self.client_name = client_name
+        self.context = context
+        self.quality_priorities = quality_priorities
+        self.dossier = dossier
+```
+
+- [ ] Modify `GreenfieldSwarm._run_discovery()`: if `input_data.dossier` is provided, use `dossier_to_discovery_input(input_data.dossier)` instead of building `DiscoveryInput` from `input_data.transcript`:
+
+```python
+def _run_discovery(self, input_data: GreenfieldInput) -> PainMonetizationMatrix:
+    agent = DiscoveryAgent(librarian=self.librarian, provider=self.provider, model=self.model)
+
+    if input_data.dossier:
+        from contracts.adapters import dossier_to_discovery_input
+        agent_input = dossier_to_discovery_input(input_data.dossier)
+    else:
+        agent_input = DiscoveryInput(transcript=input_data.transcript, context=input_data.context)
+
+    output, passed, escalation = self.run_with_critique(
+        agent=agent, input_data=agent_input, stage_name="discovery",
+    )
+    return output
+```
+
+**Nothing else changes.** The rest of the Greenfield pipeline (Architect → Estimator → Synthesis → Proposal) receives `PainMonetizationMatrix` regardless of whether it came from a raw transcript or a Dossier.
+
+#### 4.3 Full Forge-Stream pipeline demo
+
+- [ ] Add `--mode full-dossier` to `scripts/rag_agent_demo.py`:
+
+```python
+elif mode == "full-dossier":
+    # Step 1: Ingestion → ProjectDossier (tier1 Miner)
+    from swarms import IngestionSwarm, IngestionInput
+    ingestion = IngestionSwarm(librarian=lib, run_id="forge_stream_ingestion", provider=args.provider, model=args.model)
+    ingest_result = ingestion.execute(IngestionInput(client_name=args.client, dataset_id=dataset_id))
+    dossier = ingest_result["artifacts"].get("mining")
+
+    # Step 2: Dossier → full Greenfield pipeline (tier1 Discovery, tier3 rest)
+    from swarms import GreenfieldSwarm, GreenfieldInput
+    swarm = GreenfieldSwarm(librarian=lib, run_id="forge_stream_full", provider=args.provider, model=args.model)
+    result = swarm.execute(GreenfieldInput(client_name=args.client, dossier=dossier))
+```
+
+This is the **full Forge-Stream pipeline**:
+1. RAG sync → RAG retrieval (MINER_RAG_QUERIES)
+2. MinerAgent (tier1) → `ProjectDossier` → Critic review
+3. Dossier → DiscoveryAgent (tier1) → `PainMonetizationMatrix`
+4. PainMatrix → Architect (tier3) → Estimator (tier3) → Synthesis (tier3) → Proposal (tier3)
+
+Update the `--mode` choices to include `"full-dossier"`.
+
+#### 4.4 Cost comparison
+
+- [ ] Add `--compare` flag to demo that runs the same input through both pipelines:
+  1. **Raw path:** RAG transcript → Discovery → Architect → ... → Proposal (current `--mode full`)
+  2. **Dossier path:** RAG → Miner → Dossier → Discovery → Architect → ... → Proposal (`--mode full-dossier`)
+
+  Print cost side-by-side from `SwarmCostLogger`. Reset logger between runs.
+
+  Target: **>30% cheaper** for the Dossier path. The savings come from:
+  - Discovery processing structured ~500-token Dossier rendering vs raw ~2000-token transcript
+  - Fewer tokens = cheaper tier1 calls and smaller context for downstream tier3 agents
+
+#### 4.5 Test
+
+- [ ] Create `tests/test_adapters.py`:
+  - `test_dossier_to_discovery_input_produces_valid_discovery_input`: Build a `ProjectDossier` with known fields, convert, verify `DiscoveryInput` has a `transcript` containing all stakeholder names, tech stack items, constraint requirements.
+  - `test_empty_dossier_produces_minimal_transcript`: Dossier with empty lists → transcript still valid (just project name + summary).
+  - `test_legacy_debt_included_only_when_present`: Verify `legacy_debt_summary` appears in transcript only when non-null.
+
+- [ ] Create `tests/test_dossier_pipeline.py`:
+  - Mock agents. Pass `GreenfieldInput(dossier=sample_dossier)`. Verify Discovery receives structured transcript (not raw text). Verify rest of pipeline runs normally.
 
 ---
 
@@ -424,20 +535,19 @@ These are complementary, not redundant. The Dossier can **replace the raw transc
 
 ## Instructions for Cursor / Claude Code
 
-1. **Phases 1 and 2 are done. Start with Phase 3.**
+1. **Phases 1–3 are done. Start with Phase 4.**
 2. **Use LiteLLM for everything LLM-related.** Cost tracking, retries, fallbacks, model routing — do not reimplement these.
-3. **Keep the `LLMProvider` interface.** Agents call `self.llm_provider.complete()`. The provider is backed by `litellm.completion()`. This means `BaseAgent`, swarms, and the demo scripts don't change.
-4. **Follow existing patterns exactly.** The Miner Agent should look like `DiscoveryAgent`. The Ingestion Swarm should look like `GreenfieldSwarm`. Copy the structure, change the content.
-5. **Do not create unnecessary classes or abstractions.** One MinerAgent, one IngestionSwarm. No BusinessMiner, TechMiner, AggregatorAgent, CompactionAgent. Start simple — split later if needed.
-6. **Keep prompts short for Tier 1 models.** Under 200 words. Numbered rules. Explicit valid values for enums. Tell the model what to do when data is missing.
-7. **The Miner does NOT call `rag_search()`.** The Ingestion Swarm retrieves RAG context and passes it to the Miner as `MinerInput.rag_context`. The agent is pure: input → output.
-8. **Test each step** before moving on. Mocked unit tests are fine. Run the demo scripts to verify end-to-end.
-9. **Validate the demo works after every change:** `python scripts/rag_agent_demo.py --mode dossier --no-sync` for the Miner path.
-10. **Do not modify RAGFlow config or Docker files.** The RAGFlow setup is stable. If retrieval breaks, check the operational notes table above.
-11. **Model IDs matter.** Use LiteLLM model strings from the table above. The format is `provider/model-name`.
+3. **Keep the `LLMProvider` interface.** Agents call `self.llm_provider.complete()`. The provider is backed by `litellm.completion()`.
+4. **Follow existing patterns exactly.** The adapter in `contracts/adapters.py` is a pure function, not a class. `GreenfieldInput` just gets an optional `dossier` field — no new swarm class needed.
+5. **The Dossier replaces the transcript, not Discovery.** The adapter renders the Dossier as readable markdown for Discovery's `transcript` field. Discovery still runs and produces `PainMonetizationMatrix`. Do not skip Discovery or try to convert Dossier directly to PainMatrix.
+6. **Keep changes minimal.** Phase 4 touches: `contracts/adapters.py` (new), `swarms/greenfield.py` (small change to `_run_discovery` and `GreenfieldInput`), `scripts/rag_agent_demo.py` (add `--mode full-dossier`), and tests.
+7. **Test each step** before moving on. Mocked unit tests are fine. Run the demo scripts to verify end-to-end.
+8. **Validate the demo works after every change:** `python scripts/rag_agent_demo.py --mode dossier --no-sync` (existing), then `--mode full-dossier --no-sync` (new).
+9. **Do not modify RAGFlow config or Docker files.** The RAGFlow setup is stable.
+10. **Model IDs matter.** Use LiteLLM model strings from the table above. The format is `provider/model-name`.
 
 ---
 
 ## Next Step
 
-> Start with **Phase 3.1–3.2**: Add `MinerInput` contract, create `MinerAgent` with the system prompt above, register in `agents/__init__.py`. Test with `pytest tests/test_miner_agent.py`. Then build the `IngestionSwarm` (3.4) and demo integration (3.6).
+> Start with **Phase 4.1**: Create `contracts/adapters.py` with `dossier_to_discovery_input()`. Test with `pytest tests/test_adapters.py`. Then modify `GreenfieldInput` and `_run_discovery()` (4.2), and add `--mode full-dossier` to the demo (4.3).

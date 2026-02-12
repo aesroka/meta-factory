@@ -11,6 +11,7 @@ from .architect_agent import ArchitectAgent, ArchitectInput
 from .estimator_agent import EstimatorAgent, EstimatorInput
 from .synthesis_agent import SynthesisAgent, SynthesisInput
 from .proposal_agent import ProposalAgent, ProposalInput
+from .miner_agent import MinerAgent, MINER_RAG_QUERIES
 
 __all__ = [
     # Base
@@ -34,4 +35,6 @@ __all__ = [
     "SynthesisInput",
     "ProposalAgent",
     "ProposalInput",
+    "MinerAgent",
+    "MINER_RAG_QUERIES",
 ]
