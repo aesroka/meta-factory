@@ -88,7 +88,11 @@ class LiteLLMProvider(LLMProvider):
             metadata: Optional dict passed to litellm (e.g. agent, tier) for cost logging.
         """
         self._default_model = default_model
-        self._metadata = metadata or {}
+        self._metadata = dict(metadata or {})
+
+    def set_metadata(self, meta: dict) -> None:
+        """Set or merge metadata for cost logging (agent, tier)."""
+        self._metadata.update(meta)
 
     @property
     def name(self) -> str:
@@ -106,19 +110,30 @@ class LiteLLMProvider(LLMProvider):
         max_tokens: int = 4096,
     ) -> LLMResponse:
         import litellm
+        from .cost_logger import get_swarm_cost_logger
+        get_swarm_cost_logger()  # ensure callback is registered
 
         resolved_model = model or self._default_model
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ]
-        kwargs = {
-            "model": resolved_model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "metadata": {**self._metadata},
-        }
-        response = litellm.completion(**kwargs)
+        metadata = {**self._metadata}
+        if resolved_model in ("tier1", "tier2", "tier3"):
+            from .router import get_router
+            response = get_router().completion(
+                model=resolved_model,
+                messages=messages,
+                max_tokens=max_tokens,
+                metadata=metadata,
+            )
+        else:
+            response = litellm.completion(
+                model=resolved_model,
+                messages=messages,
+                max_tokens=max_tokens,
+                metadata=metadata,
+            )
 
         content = response.choices[0].message.content or ""
         usage = getattr(response, "usage", None)

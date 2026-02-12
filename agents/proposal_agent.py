@@ -133,6 +133,8 @@ Produce a complete ProposalDocument with:
 8. Investment section
 """
 
+    DEFAULT_TIER = "tier3"
+
     def __init__(
         self,
         librarian: Optional[Librarian] = None,

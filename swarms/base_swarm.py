@@ -122,67 +122,88 @@ class BaseSwarm(ABC):
             )
             return input_data, False, escalation
 
-        # Run the agent
-        result = agent.run(input_data)
-        self._update_token_usage(agent)
-        current_output = result.output
+        current_output: Optional[BaseModel] = None
+        try:
+            # Run the agent
+            result = agent.run(input_data)
+            self._update_token_usage(agent)
+            current_output = result.output
 
-        # Create critic for this agent
-        critic = CriticAgent(
-            agent.role,
-            librarian=self.librarian,
-            provider=self.provider,
-            model=self.model,
-        )
-        all_objections: List[Objection] = []
-        verdicts: List[CriticVerdict] = []
-
-        # Critic loop
-        for iteration in range(settings.max_critic_iterations):
-            if not self._check_cost_limit():
-                break
-
-            verdict = critic.review(current_output, iteration, all_objections)
-            verdicts.append(verdict)
-            self.run.token_usage.input_tokens += critic.total_usage.input_tokens
-            self.run.token_usage.output_tokens += critic.total_usage.output_tokens
-
-            if verdict.passed:
-                self.run.critic_logs[stage_name] = verdicts
-                self.run.artifacts[stage_name] = current_output
-                return current_output, True, None
-
-            # Collect objections
-            all_objections.extend(verdict.objections)
-
-            # Check if we should re-run
-            if iteration < settings.max_critic_iterations - 1:
-                if rerun_fn:
-                    current_output = rerun_fn(current_output, verdict.objections)
-                else:
-                    # Default: re-run agent with enriched input
-                    enriched_input = self._enrich_with_feedback(input_data, verdict)
-                    result = agent.run(enriched_input)
-                    self._update_token_usage(agent)
-                    current_output = result.output
-
-        # Max iterations reached - escalate if objections remain
-        self.run.critic_logs[stage_name] = verdicts
-
-        if all_objections:
-            escalation = HumanEscalation(
-                artifact=current_output.model_dump() if hasattr(current_output, 'model_dump') else current_output,
-                review_log=all_objections,
-                reason="Max critic iterations reached with unresolved objections",
-                suggested_resolution=f"Manual review required for {stage_name}",
-                context=f"Stage: {stage_name}, Iterations: {len(verdicts)}",
+            # Create critic for this agent
+            critic = CriticAgent(
+                agent.role,
+                librarian=self.librarian,
+                provider=self.provider,
+                model=self.model,
             )
-            self.run.escalations.append(escalation)
-            self.run.artifacts[stage_name] = current_output
-            return current_output, False, escalation
+            all_objections: List[Objection] = []
+            verdicts: List[CriticVerdict] = []
 
-        self.run.artifacts[stage_name] = current_output
-        return current_output, True, None
+            # Critic loop
+            for iteration in range(settings.max_critic_iterations):
+                if not self._check_cost_limit():
+                    break
+
+                verdict = critic.review(current_output, iteration, all_objections)
+                verdicts.append(verdict)
+                self.run.token_usage.input_tokens += critic.total_usage.input_tokens
+                self.run.token_usage.output_tokens += critic.total_usage.output_tokens
+
+                if verdict.passed:
+                    self.run.critic_logs[stage_name] = verdicts
+                    self.run.artifacts[stage_name] = current_output
+                    return current_output, True, None
+
+                # Collect objections
+                all_objections.extend(verdict.objections)
+
+                # Check if we should re-run
+                if iteration < settings.max_critic_iterations - 1:
+                    if rerun_fn:
+                        current_output = rerun_fn(current_output, verdict.objections)
+                    else:
+                        # Default: re-run agent with enriched input
+                        enriched_input = self._enrich_with_feedback(input_data, verdict)
+                        result = agent.run(enriched_input)
+                        self._update_token_usage(agent)
+                        current_output = result.output
+
+            # Max iterations reached - escalate if objections remain
+            self.run.critic_logs[stage_name] = verdicts
+
+            if all_objections:
+                escalation = HumanEscalation(
+                    artifact=current_output.model_dump() if hasattr(current_output, 'model_dump') else current_output,
+                    review_log=all_objections,
+                    reason="Max critic iterations reached with unresolved objections",
+                    suggested_resolution=f"Manual review required for {stage_name}",
+                    context=f"Stage: {stage_name}, Iterations: {len(verdicts)}",
+                )
+                self.run.escalations.append(escalation)
+                self.run.artifacts[stage_name] = current_output
+                return current_output, False, escalation
+
+            self.run.artifacts[stage_name] = current_output
+            return current_output, True, None
+
+        except Exception as e:
+            from litellm import BudgetExceededError
+            if isinstance(e, BudgetExceededError):
+                self._cost_exceeded = True
+                best = current_output if current_output is not None else input_data
+                artifact = best.model_dump() if hasattr(best, 'model_dump') else best
+                escalation = HumanEscalation(
+                    artifact=artifact,
+                    review_log=[],
+                    reason=f"LiteLLM budget exceeded (max ${settings.max_cost_per_run_usd})",
+                    suggested_resolution="Increase cost limit or reduce scope",
+                    context=f"Stage: {stage_name}",
+                )
+                if current_output is not None:
+                    self.run.artifacts[stage_name] = current_output
+                self.run.escalations.append(escalation)
+                return best, False, escalation
+            raise
 
     def _enrich_with_feedback(
         self,

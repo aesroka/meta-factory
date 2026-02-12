@@ -80,9 +80,12 @@ class BaseAgent(ABC):
         self.librarian = librarian or Librarian()
         self.bible_context = self._load_bible_context()
 
-        # Get the LLM provider
+        # Get the LLM provider (when model is None, we may use DEFAULT_TIER for routing)
         self.llm_provider: LLMProvider = get_provider(provider_name=provider, model=model)
-        self.model = model or self.llm_provider.default_model
+        self.model = model or getattr(self.__class__, "DEFAULT_TIER", None) or self.llm_provider.default_model
+        if hasattr(self.llm_provider, "set_metadata"):
+            tier = getattr(self.__class__, "DEFAULT_TIER", "?")
+            self.llm_provider.set_metadata({"agent": self.role, "tier": tier})
 
         self.total_usage = TokenUsage()
 

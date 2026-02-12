@@ -111,6 +111,8 @@ Produce a complete EngagementSummary with:
 8. Clear out-of-scope items
 """
 
+    DEFAULT_TIER = "tier3"
+
     def __init__(
         self,
         librarian: Optional[Librarian] = None,

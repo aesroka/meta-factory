@@ -78,6 +78,8 @@ For each pain point identified:
 - If the input lacks concrete evidence, lower your confidence scores
 """
 
+    DEFAULT_TIER = "tier1"
+
     def __init__(
         self,
         librarian: Optional[Librarian] = None,

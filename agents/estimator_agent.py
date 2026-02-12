@@ -124,6 +124,8 @@ When reference projects are provided:
 - Validate math: E = (O + 4M + P) / 6, SD = (P - O) / 6
 """
 
+    DEFAULT_TIER = "tier3"
+
     def __init__(
         self,
         librarian: Optional[Librarian] = None,

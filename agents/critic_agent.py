@@ -91,6 +91,8 @@ Respond with valid JSON matching the CriticVerdict schema.
         # Get the LLM provider
         self.llm_provider: LLMProvider = get_provider(provider_name=provider, model=model)
         self.model = model or self.llm_provider.default_model
+        if hasattr(self.llm_provider, "set_metadata"):
+            self.llm_provider.set_metadata({"agent": f"critic({reviewing_agent_role})", "tier": "tier2"})
 
         self.total_usage = TokenUsage()
 
@@ -148,6 +150,10 @@ Respond with valid JSON matching the CriticVerdict schema.
         # Ensure iteration is set correctly
         data["iteration"] = iteration
         data["max_iterations"] = settings.max_critic_iterations
+        # Normalize severity to lowercase (LLM may return "MAJOR" etc.)
+        for obj in data.get("objections") or []:
+            if isinstance(obj.get("severity"), str):
+                obj["severity"] = obj["severity"].lower()
 
         return CriticVerdict.model_validate(data)
 

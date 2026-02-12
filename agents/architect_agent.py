@@ -113,6 +113,8 @@ Produce a complete ArchitectureResult with:
 5. Optional component diagram
 """
 
+    DEFAULT_TIER = "tier3"
+
     def __init__(
         self,
         librarian: Optional[Librarian] = None,
