@@ -90,7 +90,7 @@ Respond with valid JSON matching the CriticVerdict schema.
 
         # Get the LLM provider
         self.llm_provider: LLMProvider = get_provider(provider_name=provider, model=model)
-        self.model = model or self.llm_provider.default_model
+        self.model = model or "tier2"  # Route through Router's tier2 model list (gpt-4o-mini / claude-haiku)
         if hasattr(self.llm_provider, "set_metadata"):
             self.llm_provider.set_metadata({"agent": f"critic({reviewing_agent_role})", "tier": "tier2"})
 

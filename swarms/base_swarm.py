@@ -162,11 +162,19 @@ class BaseSwarm(ABC):
                     if rerun_fn:
                         current_output = rerun_fn(current_output, verdict.objections)
                     else:
-                        # Default: re-run agent with enriched input
+                        # Default: re-run agent with enriched input.
+                        # Escalate to tier3 on second+ retry (iteration 0 = first retry, iteration 1 = second retry).
                         enriched_input = self._enrich_with_feedback(input_data, verdict)
-                        result = agent.run(enriched_input)
+                        escalation_model = "tier3" if iteration >= 1 else None
+                        if escalation_model and hasattr(agent, "llm_provider") and hasattr(agent.llm_provider, "set_metadata"):
+                            agent.llm_provider.set_metadata({"tier": "tier3", "escalated": True})
+                        result = agent.run(enriched_input, model=escalation_model)
                         self._update_token_usage(agent)
                         current_output = result.output
+                        # Restore agent's normal tier in metadata for future calls
+                        if escalation_model and hasattr(agent, "llm_provider") and hasattr(agent.llm_provider, "set_metadata"):
+                            default_tier = getattr(agent.__class__, "DEFAULT_TIER", "tier1")
+                            agent.llm_provider.set_metadata({"tier": default_tier, "escalated": False})
 
             # Max iterations reached - escalate if objections remain
             self.run.critic_logs[stage_name] = verdicts

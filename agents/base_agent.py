@@ -144,12 +144,19 @@ class BaseAgent(ABC):
         # Validate against schema
         return self.output_schema.model_validate(data)
 
-    def run(self, input_data: BaseModel, max_retries: int = 1) -> AgentResult:
+    def run(
+        self,
+        input_data: BaseModel,
+        max_retries: int = 1,
+        model: Optional[str] = None,
+    ) -> AgentResult:
         """Execute the agent.
 
         Args:
             input_data: Input data as a Pydantic model
             max_retries: Number of retries on validation failure
+            model: Optional model override for this call (e.g. "tier3" for escalation).
+                   If None, uses self.model set at init.
 
         Returns:
             AgentResult with validated output and metadata
@@ -177,11 +184,11 @@ class BaseAgent(ABC):
                     )
                     retries = attempt
 
-                # Call the LLM via provider
+                # Call the LLM via provider (model override for this call, e.g. tier escalation)
                 response = self.llm_provider.complete(
                     system_prompt=full_system_prompt,
                     user_message=user_message,
-                    model=self.model,
+                    model=model or self.model,
                     max_tokens=settings.max_tokens_per_agent_call,
                 )
 

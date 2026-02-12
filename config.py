@@ -39,6 +39,12 @@ class Settings(BaseSettings):
         default=5.00,
         description="Maximum total cost per run in USD"
     )
+    cost_warning_threshold: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Warn when total cost reaches this fraction of max budget (e.g. 0.8 = 80%%)"
+    )
     max_critic_iterations: int = Field(
         default=3,
         description="Maximum critic review iterations before escalation"

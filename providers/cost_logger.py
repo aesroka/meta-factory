@@ -21,6 +21,15 @@ def _get_swarm_logger_impl():
                 hidden = getattr(response_obj, "_hidden_params", None) or {}
                 cost = float(hidden.get("response_cost", 0) or 0)
             self.total_cost += cost
+            # Budget warning at 80% of litellm max_budget (no config import to avoid circular deps)
+            try:
+                import litellm
+                max_budget = getattr(litellm, "max_budget", None)
+                if max_budget is not None and self.total_cost >= max_budget * 0.8:
+                    remaining = max_budget - self.total_cost
+                    print(f"  [BUDGET WARNING] Total ${self.total_cost:.2f} >= 80% of max_budget ${max_budget:.2f}. Remaining: ${remaining:.2f}")
+            except Exception:
+                pass
             litellm_params = kwargs.get("litellm_params") or {}
             meta = (litellm_params.get("metadata") or kwargs.get("metadata") or {})
             if not isinstance(meta, dict):
