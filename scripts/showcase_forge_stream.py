@@ -132,6 +132,11 @@ def main() -> None:
         default="standard",
         help="standard = RAG-only; premium = hybrid context (default: standard).",
     )
+    parser.add_argument(
+        "--no-ensemble",
+        action="store_true",
+        help="Use single Estimator instead of Optimist/Pessimist/Realist ensemble.",
+    )
     args = parser.parse_args()
 
     workspace_dir = REPO_ROOT / "workspace"
@@ -209,8 +214,11 @@ def main() -> None:
         provider=args.provider,
         model=args.model,
     )
+    ensemble = not getattr(args, "no_ensemble", False)
+    if getattr(args, "quality", "standard") == "premium":
+        ensemble = True
     try:
-        result = swarm.execute(GreenfieldInput(client_name="Acme Logistics", dossier=dossier))
+        result = swarm.execute(GreenfieldInput(client_name="Acme Logistics", dossier=dossier, ensemble=ensemble))
     except Exception as e:
         print(f"  [ERROR] Pipeline failed: {e}")
         raise

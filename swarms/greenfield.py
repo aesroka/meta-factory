@@ -44,12 +44,14 @@ class GreenfieldInput:
         context: Optional[str] = None,
         quality_priorities: Optional[list[str]] = None,
         dossier: Optional["ProjectDossier"] = None,
+        ensemble: bool = True,
     ):
         self.transcript = transcript
         self.client_name = client_name
         self.context = context
         self.quality_priorities = quality_priorities
         self.dossier = dossier
+        self.ensemble = ensemble
 
 
 class GreenfieldSwarm(BaseSwarm):
@@ -90,7 +92,7 @@ class GreenfieldSwarm(BaseSwarm):
                 return self._finalize_run("cost_exceeded")
 
             # Stage 3: Estimation
-            estimation = self._run_estimation(architecture)
+            estimation = self._run_estimation(architecture, ensemble=getattr(input_data, "ensemble", True))
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
@@ -156,25 +158,42 @@ class GreenfieldSwarm(BaseSwarm):
 
         return output
 
-    def _run_estimation(self, architecture: ArchitectureResult) -> EstimationResult:
-        """Run the estimation stage."""
-        agent = EstimatorAgent(
-            librarian=self.librarian,
-            provider=self.provider,
-            model=self.model,
-        )
+    def _run_estimation(self, architecture: ArchitectureResult, ensemble: bool = True) -> EstimationResult:
+        """Run the estimation stage (single agent or ensemble of Optimist/Pessimist/Realist)."""
         agent_input = EstimatorInput(
             architecture_decisions=architecture.decisions,
             project_phase="requirements_complete",
         )
 
-        output, passed, escalation = self.run_with_critique(
-            agent=agent,
-            input_data=agent_input,
-            stage_name="estimation",
-        )
+        if not ensemble:
+            agent = EstimatorAgent(
+                librarian=self.librarian,
+                provider=self.provider,
+                model=self.model,
+            )
+            output, _passed, _escalation = self.run_with_critique(
+                agent=agent,
+                input_data=agent_input,
+                stage_name="estimation",
+            )
+            return output
 
-        return output
+        from agents.estimation_ensemble import OptimistEstimator, PessimistEstimator, RealistEstimator
+        from agents.estimation_aggregator import aggregate_ensemble
+
+        opt_agent = OptimistEstimator(librarian=self.librarian, provider=self.provider, model=self.model)
+        pess_agent = PessimistEstimator(librarian=self.librarian, provider=self.provider, model=self.model)
+        real_agent = RealistEstimator(librarian=self.librarian, provider=self.provider, model=self.model)
+
+        opt_output, _, _ = self.run_with_critique(opt_agent, agent_input, stage_name="estimation_optimist")
+        pess_output, _, _ = self.run_with_critique(pess_agent, agent_input, stage_name="estimation_pessimist")
+        real_output, _, _ = self.run_with_critique(real_agent, agent_input, stage_name="estimation_realist")
+
+        self.run.artifacts["estimate_optimist"] = opt_output
+        self.run.artifacts["estimate_pessimist"] = pess_output
+        self.run.artifacts["estimate_realist"] = real_output
+
+        return aggregate_ensemble(opt_output, pess_output, real_output)
 
     def _run_synthesis(
         self,

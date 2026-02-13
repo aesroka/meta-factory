@@ -817,7 +817,7 @@ python scripts/rag_agent_demo.py --mode dossier --context-mode hybrid --no-sync
 
 ---
 
-### Phase 7: Ensemble Estimation (Wideband Delphi)
+### Phase 7: Ensemble Estimation (Wideband Delphi) ✅
 
 *Goal: Replace the single EstimatorAgent with the Optimist/Pessimist/Realist ensemble from the original deep research. Programmatic PERT aggregation — not LLM — combines the three independent estimates.*
 
