@@ -82,9 +82,13 @@ class TestTierEscalation:
         """Mock critic to fail twice then pass. Verify first re-run: model=None; second re-run: model='tier3'."""
         from swarms.base_swarm import BaseSwarm
 
-        # Concrete swarm that only implements abstract run()
+        # Concrete swarm that only implements abstract execute/mode_name
         class ConcreteSwarm(BaseSwarm):
-            def run(self, input_data):
+            @property
+            def mode_name(self) -> str:
+                return "test"
+
+            def execute(self, input_data):
                 return input_data
 
         swarm = ConcreteSwarm()
@@ -173,7 +177,11 @@ class TestNoEscalationWhenPassFirstTime:
         from swarms.base_swarm import BaseSwarm
 
         class ConcreteSwarm(BaseSwarm):
-            def run(self, input_data):
+            @property
+            def mode_name(self) -> str:
+                return "test"
+
+            def execute(self, input_data):
                 return input_data
 
         swarm = ConcreteSwarm()

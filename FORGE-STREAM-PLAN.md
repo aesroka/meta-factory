@@ -497,7 +497,7 @@ Update the `--mode` choices to include `"full-dossier"`.
 
 ---
 
-### Phase 5: Quality Gate (Tiered Critic Loop)
+### Phase 5: Quality Gate (Tiered Critic Loop) ✅
 
 *Goal: Cheap critics, expensive fixers. When a tier1 agent fails quality review, escalate to tier3 for the retry. LiteLLM Router handles model selection; we handle the escalation logic.*
 
@@ -514,7 +514,7 @@ self.model = model or getattr(self.__class__, "DEFAULT_TIER", None) or self.llm_
 
 `BaseAgent` falls back to `DEFAULT_TIER`, so agents that set `DEFAULT_TIER = "tier1"` correctly route through the Router. `CriticAgent` doesn't inherit from `BaseAgent` and doesn't have this fallback.
 
-- [ ] **Fix:** Change line 93 of `critic_agent.py` from:
+- [x] **Fix:** Change line 93 of `critic_agent.py` from:
   ```python
   self.model = model or self.llm_provider.default_model
   ```
@@ -524,13 +524,13 @@ self.model = model or getattr(self.__class__, "DEFAULT_TIER", None) or self.llm_
   ```
   This makes `self.model = "tier2"` when no explicit model is passed, so `LiteLLMProvider.complete()` routes through the Router's tier2 model list (gpt-4o-mini / claude-haiku).
 
-- [ ] **Verify:** Run `python scripts/showcase_forge_stream.py` and check cost logs. Critic calls should show `tier:tier2` **and** use an actual tier2 model (not just log the metadata).
+- [x] **Verify:** Run `python scripts/showcase_forge_stream.py` and check cost logs. Critic calls should show `tier:tier2` **and** use an actual tier2 model (not just log the metadata).
 
 #### 5.2 Add `model` parameter to `BaseAgent.run()`
 
 **The problem:** `BaseAgent.run()` always uses `self.model` (set at `__init__` time). To support tier escalation (5.3), we need the ability to override the model for a single call without creating a new agent instance.
 
-- [ ] Add an optional `model` parameter to `BaseAgent.run()`:
+- [x] Add an optional `model` parameter to `BaseAgent.run()`:
 
 ```python
 def run(self, input_data: BaseModel, max_retries: int = 1, model: Optional[str] = None) -> AgentResult:
@@ -551,7 +551,7 @@ This is backward-compatible — all existing callers don't pass `model` and get 
 
 **The mechanism:** When a critic rejects an agent's output, the swarm re-runs the agent with feedback. Currently, all retries use the same tier. We want: first retry at original tier, second+ retry at tier3.
 
-- [ ] Modify `run_with_critique()` in `base_swarm.py`. In the re-run block (around line 161-169), pass `model="tier3"` to the agent's `run()` on iteration 2+:
+- [x] Modify `run_with_critique()` in `base_swarm.py`. In the re-run block (around line 161-169), pass `model="tier3"` to the agent's `run()` on iteration 2+:
 
 ```python
 if iteration < settings.max_critic_iterations - 1:
@@ -568,9 +568,9 @@ if iteration < settings.max_critic_iterations - 1:
 
 **Why iteration >= 1 (not >= 2):** The loop is 0-indexed. `iteration=0` is the first critic review. If it fails, `iteration=0` triggers the first re-run (at original tier). If that fails too, `iteration=1` triggers the second re-run (escalated to tier3).
 
-- [ ] **Do not change the CriticAgent's tier.** Critics always stay at tier2. Only the producing agent escalates.
+- [x] **Do not change the CriticAgent's tier.** Critics always stay at tier2. Only the producing agent escalates.
 
-- [ ] Update the metadata on escalation so cost logs reflect the tier override. Before the escalated `run()` call, update the agent's metadata:
+- [x] Update the metadata on escalation so cost logs reflect the tier override. Before the escalated `run()` call, update the agent's metadata:
   ```python
   if escalation_model and hasattr(agent, 'llm_provider') and hasattr(agent.llm_provider, 'set_metadata'):
       agent.llm_provider.set_metadata({"tier": "tier3", "escalated": True})
@@ -578,9 +578,9 @@ if iteration < settings.max_critic_iterations - 1:
 
 #### 5.4 Budget warning
 
-- [ ] Add `cost_warning_threshold: float = 0.8` to `config.py` (in the "Cost controls" section, after `max_cost_per_run_usd`).
+- [x] Add `cost_warning_threshold: float = 0.8` to `config.py` (in the "Cost controls" section, after `max_cost_per_run_usd`).
 
-- [ ] In `SwarmCostLogger.log_success_event()` (in `providers/cost_logger.py`), after updating `self.total_cost`, add a warning check:
+- [x] In `SwarmCostLogger.log_success_event()` (in `providers/cost_logger.py`), after updating `self.total_cost`, add a warning check:
 
 ```python
 import litellm
@@ -594,7 +594,7 @@ Read `cost_warning_threshold` from `config.py` instead of hardcoding `0.8` if yo
 
 #### 5.5 Test
 
-- [ ] Create `tests/test_quality_gate.py`:
+- [x] Create `tests/test_quality_gate.py`:
 
   **Test 1: Critic routes through tier2.** Instantiate `CriticAgent(reviewing_agent_role="discovery")` with no explicit model. Assert `agent.model == "tier2"`. Mock `litellm.completion` and verify the model passed to the Router is `"tier2"`.
 
