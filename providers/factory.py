@@ -1,25 +1,10 @@
 """Factory for creating LLM providers (Phase 2: LiteLLM-backed)."""
 
-from typing import Optional, Dict, Type
+import os
+from typing import Optional, Dict
 
 from .base import LLMProvider
 from .litellm_provider import LiteLLMProvider, _to_litellm_model
-
-# Legacy providers kept but unused (can remove after Phase 2 verified)
-from .anthropic_provider import AnthropicProvider
-from .openai_provider import OpenAIProvider, DeepseekProvider
-from .gemini_provider import GeminiProvider
-
-# Registry for list_providers (availability check still uses legacy for now)
-PROVIDERS: Dict[str, Type[LLMProvider]] = {
-    "anthropic": AnthropicProvider,
-    "claude": AnthropicProvider,
-    "openai": OpenAIProvider,
-    "gpt": OpenAIProvider,
-    "gemini": GeminiProvider,
-    "google": GeminiProvider,
-    "deepseek": DeepseekProvider,
-}
 
 MODEL_PROVIDERS: Dict[str, str] = {
     "claude": "anthropic",
@@ -60,19 +45,21 @@ def get_provider(
 
 
 def list_providers() -> Dict[str, bool]:
-    """List all providers and their availability.
-
-    Returns:
-        Dict mapping provider name to availability status
-    """
+    """List all providers and their availability (via env keys)."""
+    keys = {
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "gemini": "GEMINI_API_KEY",
+        "google": "GEMINI_API_KEY",
+        "deepseek": "DEEPSEEK_API_KEY",
+    }
     result = {}
-    for name, provider_class in PROVIDERS.items():
-        # Skip aliases
-        if name in ["claude", "gpt", "google"]:
+    seen = set()
+    for name, env_var in keys.items():
+        if name in seen:
             continue
-        try:
-            provider = provider_class()
-            result[name] = provider.is_available()
-        except Exception:
-            result[name] = False
+        if name == "google":
+            continue
+        seen.add(name)
+        result[name] = bool(os.environ.get(env_var, "").strip())
     return result

@@ -41,6 +41,26 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Quick start
+
+Set an LLM API key (e.g. `OPENAI_API_KEY`) in `.env`, then:
+
+```bash
+python main.py --input ./workspace/sample_transcript.txt --client "Acme" --quality standard
+```
+
+## Quality tiers
+
+| Tier | Use case | Behaviour |
+|------|----------|-----------|
+| **standard** | Exploratory, small engagements (~£50K) | RAG-only context, single estimator, tier1/tier3 routing. ~$1–5/run. |
+| **premium** | High-value engagements (£500K+) | Hybrid context (RAG + full-context), ensemble estimation (Optimist/Pessimist/Realist), tier0/tier3. ~$30–50/run. |
+
+```bash
+python main.py --input ./transcript.txt --client "Acme" --quality premium
+python main.py --input ./transcript.txt --client "Acme" --hourly-rate 200
+```
+
 ## Usage
 
 ```bash
