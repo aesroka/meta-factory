@@ -45,6 +45,7 @@ class GreenfieldInput:
         quality_priorities: Optional[list[str]] = None,
         dossier: Optional["ProjectDossier"] = None,
         ensemble: bool = True,
+        hourly_rate: float = 150.0,
     ):
         self.transcript = transcript
         self.client_name = client_name
@@ -52,6 +53,7 @@ class GreenfieldInput:
         self.quality_priorities = quality_priorities
         self.dossier = dossier
         self.ensemble = ensemble
+        self.hourly_rate = hourly_rate
 
 
 class GreenfieldSwarm(BaseSwarm):
@@ -102,7 +104,11 @@ class GreenfieldSwarm(BaseSwarm):
                 return self._finalize_run("cost_exceeded")
 
             # Stage 5: Proposal
-            proposal = self._run_proposal(summary, input_data.client_name)
+            proposal = self._run_proposal(
+                summary,
+                input_data.client_name,
+                hourly_rate=getattr(input_data, "hourly_rate", 150.0),
+            )
 
             return self._finalize_run("completed")
 
@@ -186,13 +192,17 @@ class GreenfieldSwarm(BaseSwarm):
         real_agent = RealistEstimator(librarian=self.librarian, provider=self.provider, model=self.model)
 
         opt_output, _, _ = self.run_with_critique(opt_agent, agent_input, stage_name="estimation_optimist")
-        pess_output, _, _ = self.run_with_critique(pess_agent, agent_input, stage_name="estimation_pessimist")
-        real_output, _, _ = self.run_with_critique(real_agent, agent_input, stage_name="estimation_realist")
-
         self.run.artifacts["estimate_optimist"] = opt_output
-        self.run.artifacts["estimate_pessimist"] = pess_output
-        self.run.artifacts["estimate_realist"] = real_output
+        if not self._check_cost_limit():
+            return opt_output
 
+        pess_output, _, _ = self.run_with_critique(pess_agent, agent_input, stage_name="estimation_pessimist")
+        self.run.artifacts["estimate_pessimist"] = pess_output
+        if not self._check_cost_limit():
+            return aggregate_ensemble(opt_output, pess_output, pess_output)
+
+        real_output, _, _ = self.run_with_critique(real_agent, agent_input, stage_name="estimation_realist")
+        self.run.artifacts["estimate_realist"] = real_output
         return aggregate_ensemble(opt_output, pess_output, real_output)
 
     def _run_synthesis(
@@ -225,6 +235,7 @@ class GreenfieldSwarm(BaseSwarm):
         self,
         summary: EngagementSummary,
         client_name: str,
+        hourly_rate: float = 150.0,
     ) -> ProposalDocument:
         """Run the proposal stage."""
         agent = ProposalAgent(
@@ -235,6 +246,7 @@ class GreenfieldSwarm(BaseSwarm):
         agent_input = ProposalInput(
             engagement_summary=summary,
             client_name=client_name,
+            hourly_rate_gbp=hourly_rate,
         )
 
         output, passed, escalation = self.run_with_critique(

@@ -1,56 +1,50 @@
 {
   "pain_points": [
     {
-      "description": "Drivers are still reliant on paper manifests which need to be reprinted with every route change, leading to potential confusion.",
+      "description": "Drivers leave before updated manifests are printed due to route changes.",
       "frequency": "daily",
       "cost_per_incident": null,
       "annual_cost": null,
-      "source_quote": "paper manifests printed daily; route changes require reprint and drivers sometimes leave before updates.",
-      "confidence": 1.0
+      "source_quote": "Pain: paper manifests printed daily; route changes require reprint and drivers sometimes leave before updates.",
+      "confidence": 0.8
     },
     {
-      "description": "The application currently assumes a fixed manifest at login, preventing real-time updates for drivers.",
+      "description": "Manual handling of paper manifests leads to errors and lacks a digital audit trail.",
       "frequency": "daily",
       "cost_per_incident": null,
       "annual_cost": null,
-      "source_quote": "app assumes fixed manifest at login; no refresh.",
-      "confidence": 1.0
-    },
-    {
-      "description": "There is a lack of real-time updates due to the absence of WebSocket or push notifications, hindering drivers' ability to receive immediate route changes.",
-      "frequency": "daily",
-      "cost_per_incident": null,
-      "annual_cost": null,
-      "source_quote": "no WebSocket/push for live manifest updates.",
-      "confidence": 1.0
+      "source_quote": "Pain: paper manifests printed daily... digital audit trail.",
+      "confidence": 0.7
     }
   ],
   "stakeholder_needs": [
     {
-      "role": "Product",
-      "need": "Eliminate paper manifests and ensure real-time updates for compliance and audit purposes.",
+      "role": "Alex (Product)",
+      "need": "Transition from paper to digital manifests with live updates and a digital audit trail for compliance.",
       "priority": "critical"
     },
     {
-      "role": "Engineering",
-      "need": "Implement dynamic refresh capabilities for the manifest and ensure offline support.",
+      "role": "Sam (Engineering)",
+      "need": "Implement dynamic manifest refresh to support real-time updates in the mobile app, including offline support.",
       "priority": "high"
     },
     {
-      "role": "Consultant",
-      "need": "Reduce errors stemming from paper-based processes by transitioning to digital solutions.",
-      "priority": "high"
+      "role": "Jordan (Consultant)",
+      "need": "Reduce paper-based errors through real-time updates.",
+      "priority": "medium"
     }
   ],
   "total_annual_cost_of_pain": null,
   "key_constraints": [
-    "Mobile: Real-time manifest updates",
-    "Compliance: Digital records for auditors",
-    "Backend: WebSocket or push channel for manifest stream"
+    "Must-have: Mobile real-time manifest updates",
+    "Must-have: Offline capability",
+    "Must-have: Compliance with digital records for auditors",
+    "Should-have: WebSocket or push channel for manifest stream"
   ],
   "recommended_next_steps": [
-    "Discuss further with the engineering team on the feasibility of implementing WebSocket.",
-    "Evaluate potential solutions for dynamic manifest refresh and offline capabilities.",
-    "Explore options to gather quantifiable costs associated with paper manifest printing."
+    "Investigate implementing WebSocket or another push channel for real-time updates to the mobile app.",
+    "Develop a solution for dynamic manifest refresh to support live updates when routes change.",
+    "Evaluate the feasibility of creating a polling mechanism or adapter to handle legacy routing service updates.",
+    "Assess and prototype solutions for offline capabilities to ensure full access for drivers without connection."
   ]
 }

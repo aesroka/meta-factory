@@ -138,6 +138,8 @@ class BaseSwarm(ABC):
             )
             all_objections: List[Objection] = []
             verdicts: List[CriticVerdict] = []
+            prev_critic_input = 0
+            prev_critic_output = 0
 
             # Critic loop
             for iteration in range(settings.max_critic_iterations):
@@ -146,8 +148,13 @@ class BaseSwarm(ABC):
 
                 verdict = critic.review(current_output, iteration, all_objections)
                 verdicts.append(verdict)
-                self.run.token_usage.input_tokens += critic.total_usage.input_tokens
-                self.run.token_usage.output_tokens += critic.total_usage.output_tokens
+                # Only add delta: critic.total_usage is cumulative across iterations
+                delta_in = critic.total_usage.input_tokens - prev_critic_input
+                delta_out = critic.total_usage.output_tokens - prev_critic_output
+                self.run.token_usage.input_tokens += delta_in
+                self.run.token_usage.output_tokens += delta_out
+                prev_critic_input = critic.total_usage.input_tokens
+                prev_critic_output = critic.total_usage.output_tokens
 
                 if verdict.passed:
                     self.run.critic_logs[stage_name] = verdicts
@@ -162,13 +169,17 @@ class BaseSwarm(ABC):
                     if rerun_fn:
                         current_output = rerun_fn(current_output, verdict.objections)
                     else:
-                        # Default: re-run agent with enriched input.
+                        # Default: re-run agent with critic feedback in the user message (so the model sees it).
                         # Escalate to tier3 on second+ retry (iteration 0 = first retry, iteration 1 = second retry).
-                        enriched_input = self._enrich_with_feedback(input_data, verdict)
+                        feedback_str = self._format_feedback_for_retry(verdict)
                         escalation_model = "tier3" if iteration >= 1 else None
                         if escalation_model and hasattr(agent, "llm_provider") and hasattr(agent.llm_provider, "set_metadata"):
                             agent.llm_provider.set_metadata({"tier": "tier3", "escalated": True})
-                        result = agent.run(enriched_input, model=escalation_model)
+                        result = agent.run(
+                            input_data,
+                            model=escalation_model,
+                            extra_user_context=feedback_str,
+                        )
                         self._update_token_usage(agent)
                         current_output = result.output
                         # Restore agent's normal tier in metadata for future calls
@@ -213,41 +224,19 @@ class BaseSwarm(ABC):
                 return best, False, escalation
             raise
 
-    def _enrich_with_feedback(
-        self,
-        input_data: BaseModel,
-        verdict: CriticVerdict,
-    ) -> BaseModel:
-        """Enrich input data with critic feedback for retry.
-
-        Creates a new input with feedback context added.
-        """
-        # Convert to dict and add feedback
-        data = input_data.model_dump()
-
-        feedback = {
-            "critic_feedback": {
-                "score": verdict.score,
-                "objections": [
-                    {
-                        "category": obj.category,
-                        "description": obj.description,
-                        "severity": obj.severity.value,
-                        "suggested_fix": obj.suggested_fix,
-                    }
-                    for obj in verdict.objections
-                ],
-                "instruction": "Address the objections listed above in your revised output.",
-            }
-        }
-
-        # Add to context or create new field
-        if "context" in data and isinstance(data["context"], dict):
-            data["context"].update(feedback)
-        else:
-            data["previous_feedback"] = feedback
-
-        return type(input_data).model_validate(data)
+    def _format_feedback_for_retry(self, verdict: CriticVerdict) -> str:
+        """Format critic verdict as text for inclusion in the user message on retry."""
+        lines = [
+            f"Critic score: {verdict.score}.",
+            "Address the following objections in your revised output:",
+            "",
+        ]
+        for obj in verdict.objections:
+            lines.append(f"- [{obj.category}] {obj.description}")
+            if obj.suggested_fix:
+                lines.append(f"  Suggested fix: {obj.suggested_fix}")
+            lines.append("")
+        return "\n".join(lines).strip()
 
     def save_artifacts(self, output_dir: Optional[str] = None) -> str:
         """Save all artifacts to the output directory.

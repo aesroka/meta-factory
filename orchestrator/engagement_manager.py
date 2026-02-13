@@ -107,6 +107,8 @@ class EngagementManager:
                 codebase_content,
                 provider or self.provider,
                 model or self.model,
+                quality=quality,
+                hourly_rate=hourly_rate,
             )
 
             # Step 3: Finalize and return results
@@ -123,6 +125,8 @@ class EngagementManager:
         codebase_content: Optional[str] = None,
         provider: Optional[str] = None,
         model: Optional[str] = None,
+        quality: str = "standard",
+        hourly_rate: float = 150.0,
     ) -> Dict[str, Any]:
         """Dispatch execution to the appropriate swarm.
 
@@ -133,6 +137,8 @@ class EngagementManager:
             codebase_content: Optional codebase for greyfield
             provider: LLM provider for agents
             model: Model name for agents
+            quality: standard or premium (ensemble estimation)
+            hourly_rate: GBP per hour for cost estimates
 
         Returns:
             Swarm execution results
@@ -148,6 +154,7 @@ class EngagementManager:
                 transcript=input_content,
                 client_name=client_name,
                 ensemble=(quality == "premium"),
+                hourly_rate=hourly_rate,
             )
             return swarm.execute(swarm_input)
 
@@ -161,6 +168,7 @@ class EngagementManager:
             swarm_input = BrownfieldInput(
                 codebase_description=input_content,
                 client_name=client_name,
+                hourly_rate=hourly_rate,
             )
             return swarm.execute(swarm_input)
 
@@ -178,6 +186,7 @@ class EngagementManager:
                 transcript=input_content,
                 codebase_description=codebase_content,
                 client_name=client_name,
+                hourly_rate=hourly_rate,
             )
             return swarm.execute(swarm_input)
 

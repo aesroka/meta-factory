@@ -57,6 +57,7 @@ class GreyfieldInput:
         known_issues: Optional[list[str]] = None,
         quality_priorities: Optional[list[str]] = None,
         dossier: Optional[ProjectDossier] = None,
+        hourly_rate: float = 150.0,
     ):
         self.transcript = transcript
         self.codebase_description = codebase_description
@@ -66,6 +67,7 @@ class GreyfieldInput:
         self.known_issues = known_issues
         self.quality_priorities = quality_priorities
         self.dossier = dossier
+        self.hourly_rate = hourly_rate
 
 
 class GreyfieldSwarm(BaseSwarm):
@@ -131,7 +133,11 @@ class GreyfieldSwarm(BaseSwarm):
                 return self._finalize_run("cost_exceeded")
 
             # Stage 6: Proposal
-            proposal = self._run_proposal(summary, input_data.client_name)
+            proposal = self._run_proposal(
+                summary,
+                input_data.client_name,
+                hourly_rate=getattr(input_data, "hourly_rate", 150.0),
+            )
 
             return self._finalize_run("completed")
 
@@ -375,6 +381,7 @@ class GreyfieldSwarm(BaseSwarm):
         self,
         summary: EngagementSummary,
         client_name: str,
+        hourly_rate: float = 150.0,
     ) -> ProposalDocument:
         """Run proposal generation."""
         agent = ProposalAgent(
@@ -385,6 +392,7 @@ class GreyfieldSwarm(BaseSwarm):
         agent_input = ProposalInput(
             engagement_summary=summary,
             client_name=client_name,
+            hourly_rate_gbp=hourly_rate,
         )
 
         output, passed, escalation = self.run_with_critique(

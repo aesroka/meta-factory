@@ -21,6 +21,10 @@ class ProposalInput(BaseModel):
     engagement_summary: EngagementSummary = Field(..., description="Synthesized engagement summary")
     client_name: str = Field(..., description="Client/company name")
     project_name: Optional[str] = Field(None, description="Project name if different from client")
+    hourly_rate_gbp: Optional[float] = Field(
+        150.0,
+        description="Hourly rate in GBP for estimated_cost_gbp in delivery_phases",
+    )
     tone: Optional[str] = Field(
         default="professional",
         description="Tone: professional, consultative, technical"
@@ -113,6 +117,22 @@ Each milestone should have:
 - Estimated hours
 - Dependencies on other milestones
 
+## Phased Delivery (Required)
+
+You MUST populate delivery_phases and recommended_first_phase.
+
+- **delivery_phases**: List of phases (e.g. POC, MVP, V1, extensions). Each phase must include:
+  - phase_name (e.g. "POC", "MVP", "V1.1 – Analytics Extension")
+  - phase_type: one of "poc", "mvp", "v1", "extension"
+  - goal: one-sentence value of this phase
+  - success_criteria: list of how we know the phase is done
+  - milestones: list of milestones for this phase
+  - estimated_hours, estimated_weeks, estimated_cost_gbp (use the hourly rate if provided)
+  - can_stop_here: true if the client gets standalone value from just this phase (typically true for POC/MVP/V1)
+  - prerequisites: prior phase names if any
+- **recommended_first_phase**: Which phase to start with (e.g. "POC" or "MVP").
+- **total_estimated_hours** / **total_estimated_weeks**: Roll-up across phases.
+
 ## Evidence Linking
 
 Every claim should connect to evidence:
@@ -130,7 +150,9 @@ Produce a complete ProposalDocument with:
 5. Technical approach
 6. Milestones
 7. Timeline
-8. Investment section
+8. delivery_phases (POC → MVP → V1 → extensions, each with goal, success_criteria, can_stop_here, estimated_cost_gbp)
+9. recommended_first_phase and total_estimated_hours / total_estimated_weeks
+10. Investment section
 """
 
     DEFAULT_TIER = "tier3"

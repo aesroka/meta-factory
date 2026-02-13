@@ -90,6 +90,10 @@ Explicitly identify what is NOT included:
 - Technical capabilities not addressed
 - Future phases mentioned but not estimated
 
+## Phased Delivery (for Proposal)
+
+If the engagement suggests a phased approach (e.g. POC → MVP → V1 → extensions), capture that intent in assumptions or out-of-scope so the Proposal agent can structure delivery_phases (e.g. "Delivery is structured as POC then MVP then V1; each phase has standalone value").
+
 ## Coherence Check
 
 Ensure:

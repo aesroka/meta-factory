@@ -49,11 +49,17 @@ class IngestionSwarm(BaseSwarm):
                 return self._finalize_run("error")
             rag_dossier = self._run_rag_pipeline(input_data)
             full_dossier = self._full_context_extract(input_data.raw_documents, input_data)
-            recon = self._reconcile_dossiers(rag_dossier, full_dossier, input_data)
-            self.run.artifacts["dossier_rag"] = rag_dossier
-            self.run.artifacts["dossier_full"] = full_dossier
-            self.run.artifacts["reconciliation"] = recon
-            dossier = recon.merged_dossier
+            if rag_dossier is None:
+                # RAG returned nothing (e.g. empty dataset); use full-context result only
+                self.run.artifacts["dossier_rag"] = None
+                self.run.artifacts["dossier_full"] = full_dossier
+                dossier = full_dossier
+            else:
+                recon = self._reconcile_dossiers(rag_dossier, full_dossier, input_data)
+                self.run.artifacts["dossier_rag"] = rag_dossier
+                self.run.artifacts["dossier_full"] = full_dossier
+                self.run.artifacts["reconciliation"] = recon
+                dossier = recon.merged_dossier
         else:
             self.run.error = f"Unknown context_mode: {input_data.context_mode}"
             return self._finalize_run("error")

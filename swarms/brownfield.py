@@ -47,6 +47,7 @@ class BrownfieldInput:
         known_issues: Optional[list[str]] = None,
         change_requirements: Optional[str] = None,
         dossier: Optional[ProjectDossier] = None,
+        hourly_rate: float = 150.0,
     ):
         self.codebase_description = codebase_description
         self.client_name = client_name
@@ -54,6 +55,7 @@ class BrownfieldInput:
         self.known_issues = known_issues
         self.change_requirements = change_requirements
         self.dossier = dossier
+        self.hourly_rate = hourly_rate
 
 
 class BrownfieldSwarm(BaseSwarm):
@@ -105,7 +107,11 @@ class BrownfieldSwarm(BaseSwarm):
                 return self._finalize_run("cost_exceeded")
 
             # Stage 5: Proposal
-            proposal = self._run_proposal(summary, input_data.client_name)
+            proposal = self._run_proposal(
+                summary,
+                input_data.client_name,
+                hourly_rate=getattr(input_data, "hourly_rate", 150.0),
+            )
 
             return self._finalize_run("completed")
 
@@ -277,6 +283,7 @@ class BrownfieldSwarm(BaseSwarm):
         self,
         summary: EngagementSummary,
         client_name: str,
+        hourly_rate: float = 150.0,
     ) -> ProposalDocument:
         """Run the proposal stage."""
         agent = ProposalAgent(
@@ -287,6 +294,7 @@ class BrownfieldSwarm(BaseSwarm):
         agent_input = ProposalInput(
             engagement_summary=summary,
             client_name=client_name,
+            hourly_rate_gbp=hourly_rate,
         )
 
         output, passed, escalation = self.run_with_critique(

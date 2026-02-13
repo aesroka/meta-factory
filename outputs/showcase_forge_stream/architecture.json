@@ -3,123 +3,139 @@
     "scenarios": [
       {
         "attribute": "Performance",
-        "scenario": "Drivers receive real-time manifest updates within 5 seconds of changes.",
+        "scenario": "System provides real-time updates to manifests with less than 200ms latency during route changes.",
         "importance": "H",
         "difficulty": "H",
-        "stimulus": "Route changes are made in the backend system.",
-        "response": "Drivers' applications update their manifests instantly.",
-        "response_measure": "Response time is monitored to ensure updates occur within 5 seconds."
-      },
-      {
-        "attribute": "Usability",
-        "scenario": "The application allows drivers to access live updates without requiring a manual refresh.",
-        "importance": "H",
-        "difficulty": "H",
-        "stimulus": "Drivers start their application while on the route.",
-        "response": "The application displays the latest manifest automatically.",
-        "response_measure": "95% of drivers report receiving updates without manual refresh."
+        "stimulus": "Route changes occur",
+        "response": "Manifests updates are pushed to mobile app",
+        "response_measure": "Update latency < 200ms"
       },
       {
         "attribute": "Availability",
-        "scenario": "The system can handle 1000 simultaneous connections for real-time updates.",
+        "scenario": "Drivers receive manifest updates even with intermittent connectivity.",
         "importance": "H",
         "difficulty": "H",
-        "stimulus": "Drivers log in to the application during morning rush hours.",
-        "response": "All drivers remain connected and receive updates without interruptions.",
-        "response_measure": "Uptime is monitored to ensure availability above 99.9%."
+        "stimulus": "Driver's device goes offline",
+        "response": "Updates are queued and delivered when back online",
+        "response_measure": "100% of updates received without data loss"
       },
       {
-        "attribute": "Scalability",
-        "scenario": "The system scales to support real-time updates as the number of drivers increases.",
+        "attribute": "Security",
+        "scenario": "Manifest data updates are secure and comply with digital audit requirements.",
         "importance": "H",
-        "difficulty": "H",
-        "stimulus": "Additional drivers are deployed during peak season.",
-        "response": "The system continues to provide real-time updates without any degradation in performance.",
-        "response_measure": "System performance is monitored during peak load times."
+        "difficulty": "M",
+        "stimulus": "Audit request for manifest records",
+        "response": "Audit trail exists for all transactions",
+        "response_measure": "100% audit trail compliance"
+      },
+      {
+        "attribute": "Modifiability",
+        "scenario": "System supports integration with a new routing engine within 2 weeks.",
+        "importance": "M",
+        "difficulty": "M",
+        "stimulus": "Decision to use a new routing engine",
+        "response": "Integrate routing engine with minimal changes",
+        "response_measure": "Integration completed within 2 weeks"
       }
     ]
   },
   "decisions": [
     {
-      "decision": "Implement WebSocket for real-time manifest updates.",
-      "context": "The existing system method is a periodic fetch, leading to delays in manifest updates.",
-      "pattern_used": "Message Channel",
-      "eip_reference": "WebSocket for real-time updates",
-      "trade_off": "Improves real-time response but increases complexity in handling message states.",
+      "decision": "Use WebSockets for real-time manifest updates",
+      "context": "Need for real-time communication and dynamic updates in mobile app",
+      "pattern_used": "Publish-Subscribe",
+      "eip_reference": "WebSocket",
+      "trade_off": "Improves real-time update performance but may incur higher server load",
       "alternatives_considered": [
-        "Polling based updates",
-        "Long polling techniques"
+        "Polling mechanism",
+        "Synchronous REST API"
       ],
       "failure_modes": [
         {
-          "description": "WebSocket connection drops unexpectedly.",
-          "likelihood": "likely",
-          "impact": "moderate",
-          "mitigation": "Implement reconnection strategies and fallback to polling."
-        },
-        {
-          "description": "Latency spikes due to increased message traffic.",
+          "description": "WebSocket connection may drop",
           "likelihood": "possible",
-          "impact": "severe",
-          "mitigation": "Monitor performance and optimize message handling logic."
+          "impact": "moderate",
+          "mitigation": "Implement connection retry logic and offline queuing"
         }
       ]
     },
     {
-      "decision": "Utilize push notifications for offline support to keep drivers updated.",
-      "context": "Drivers may encounter areas with no internet, yet need updates.",
-      "pattern_used": "Message Dispatcher",
-      "eip_reference": "Push Notification",
-      "trade_off": "Ensures updates during downtime but adds complexity in managing message states.",
+      "decision": "Deploy a caching mechanism to handle offline capabilities",
+      "context": "Drivers may go offline and need access to manifest data",
+      "pattern_used": "Local Data Cache",
+      "eip_reference": null,
+      "trade_off": "Increases complexity in data synchronization, but ensures data availability offline",
       "alternatives_considered": [
-        "Offline data storage without push notifications"
+        "Always-online requirement",
+        "Manual sync when online"
       ],
       "failure_modes": [
         {
-          "description": "Push notifications fail to be sent when drivers regain connectivity.",
-          "likelihood": "possible",
-          "impact": "moderate",
-          "mitigation": "Queue notifications during offline periods and dispatch on reconnect."
-        },
+          "description": "Data becomes stale if not frequently synced",
+          "likelihood": "likely",
+          "impact": "minor",
+          "mitigation": "Establish regular sync intervals and conflict resolution strategy"
+        }
+      ]
+    },
+    {
+      "decision": "Implement a digital audit trail for compliance",
+      "context": "Compliance requirements stipulate an auditable digital record of all manifests",
+      "pattern_used": "Message Store",
+      "eip_reference": "Message Store",
+      "trade_off": "Increases storage requirements but ensures all record changes are logged",
+      "alternatives_considered": [
+        "Paper-based audits",
+        "Partial digital records"
+      ],
+      "failure_modes": [
         {
-          "description": "Data synchronization issues upon reconnection.",
-          "likelihood": "possible",
+          "description": "Audit trails are incomplete or corrupted",
+          "likelihood": "rare",
           "impact": "severe",
-          "mitigation": "Implement conflict resolution strategies."
+          "mitigation": "Use redundancy and regular integrity checks"
         }
       ]
     }
   ],
   "trade_off_analysis": {
     "options": [
-      "Real-time Updates with WebSocket",
-      "Static Updates with Manual Refresh"
+      "WebSocket",
+      "Polling",
+      "REST API"
     ],
     "criteria": [
-      "Responsiveness",
-      "Complexity",
+      "Latency",
       "Scalability",
-      "User Satisfaction"
+      "Complexity",
+      "Reliability"
     ],
     "scores": [
       [
         5,
+        4,
+        3,
+        4
+      ],
+      [
         3,
         5,
-        5
+        2,
+        3
       ],
       [
         2,
         4,
-        2,
-        2
+        4,
+        5
       ]
     ],
-    "recommendation": "Adopt WebSocket implementation because it maximizes responsiveness and user satisfaction while still being scalable."
+    "recommendation": "WebSocket is recommended for its superior latency and scalability despite increased complexity."
   },
   "integration_patterns": [
-    "Message Channel",
-    "Push Notification"
+    "Publish-Subscribe",
+    "Local Data Cache",
+    "Message Store"
   ],
   "component_diagram": null
 }

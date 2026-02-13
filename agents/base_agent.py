@@ -156,6 +156,7 @@ class BaseAgent(ABC):
         input_data: BaseModel,
         max_retries: int = 1,
         model: Optional[str] = None,
+        extra_user_context: Optional[str] = None,
     ) -> AgentResult:
         """Execute the agent.
 
@@ -164,6 +165,7 @@ class BaseAgent(ABC):
             max_retries: Number of retries on validation failure
             model: Optional model override for this call (e.g. "tier3" for escalation).
                    If None, uses self.model set at init.
+            extra_user_context: Optional text appended to the user message (e.g. critic feedback).
 
         Returns:
             AgentResult with validated output and metadata
@@ -173,7 +175,13 @@ class BaseAgent(ABC):
             Exception: If LLM call fails
         """
         full_system_prompt = self._build_full_system_prompt()
-        user_message = f"# INPUT\n\n{input_data.model_dump_json(indent=2)}"
+        base_input = f"# INPUT\n\n{input_data.model_dump_json(indent=2)}"
+        critic_block = (
+            "\n\n# CRITIC FEEDBACK (address in your revision)\n\n" + extra_user_context
+            if extra_user_context
+            else ""
+        )
+        user_message = base_input + critic_block
 
         last_error = None
         retries = 0
@@ -183,11 +191,12 @@ class BaseAgent(ABC):
                 # Add error context on retry
                 if attempt > 0 and last_error:
                     user_message = (
-                        f"# INPUT\n\n{input_data.model_dump_json(indent=2)}\n\n"
-                        f"# PREVIOUS ERROR\n\n"
-                        f"Your previous response did not match the required schema. "
+                        base_input
+                        + "\n\n# PREVIOUS ERROR\n\n"
+                        "Your previous response did not match the required schema. "
                         f"Error: {last_error}\n\n"
-                        f"Please fix the issues and provide a valid JSON response."
+                        "Please fix the issues and provide a valid JSON response."
+                        + critic_block
                     )
                     retries = attempt
 
