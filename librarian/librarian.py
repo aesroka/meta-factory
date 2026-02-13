@@ -29,15 +29,21 @@ class Librarian:
     RAG integration is Phase 5.
     """
 
-    def __init__(self, cheat_sheets_dir: Optional[str] = None, rag_client: Optional[Any] = None):
+    def __init__(
+        self,
+        cheat_sheets_dir: Optional[str] = None,
+        library_dir: Optional[str] = None,
+        rag_client: Optional[Any] = None,
+    ):
         """Initialize the Librarian.
 
         Args:
-            cheat_sheets_dir: Path to cheat sheets directory.
-                            Defaults to config setting.
+            cheat_sheets_dir: Path to cheat sheets directory. Defaults to config.
+            library_dir: Path to full Bible texts (used when depth='full'). Defaults to config.
             rag_client: Optional RAGFlow client for sync_workspace and get_rag_passages.
         """
         self.cheat_sheets_dir = Path(cheat_sheets_dir or settings.cheat_sheets_dir)
+        self.library_dir = Path(library_dir or settings.library_dir)
         self._cheat_sheet_cache: Dict[str, str] = {}
         self._rag_client = rag_client
         self._load_cheat_sheets()
@@ -70,8 +76,11 @@ class Librarian:
             raise KeyError(f"Cheat sheet not found: {name}")
         return self._cheat_sheet_cache[name]
 
-    def get_context_for_agent(self, agent_role: str) -> str:
-        """Returns the combined cheat sheet text for a given agent role.
+    def get_context_for_agent(self, agent_role: str, depth: str = "cheat_sheet") -> str:
+        """Returns the combined Bible context for a given agent role.
+
+        depth: "cheat_sheet" (default) = condensed summaries from cheat_sheets/;
+               "full" = full texts from library/ when available.
 
         Mapping:
         - discovery -> mom_test.md + spin_selling.md
@@ -83,9 +92,10 @@ class Librarian:
 
         Args:
             agent_role: The role of the agent (e.g., 'discovery', 'architect')
+            depth: "cheat_sheet" or "full"
 
         Returns:
-            Combined text of all relevant cheat sheets.
+            Combined text of all relevant materials.
 
         Raises:
             ValueError: If agent role is not recognized.
@@ -99,9 +109,11 @@ class Librarian:
             )
 
         bible_files = AGENT_BIBLE_MAPPING[role]
+        if depth == "full" and self.library_dir.exists():
+            return self._combine_from_library(bible_files)
         return self._combine_cheat_sheets(bible_files)
 
-    def get_context_for_critic(self, reviewing_agent_role: str) -> str:
+    def get_context_for_critic(self, reviewing_agent_role: str, depth: str = "cheat_sheet") -> str:
         """Get context for a critic reviewing a specific agent's output.
 
         The critic receives the same Bible context as the agent being reviewed,
@@ -109,11 +121,9 @@ class Librarian:
 
         Args:
             reviewing_agent_role: The role of the agent being reviewed.
-
-        Returns:
-            Combined text of relevant cheat sheets.
+            depth: "cheat_sheet" or "full" (passed through to get_context_for_agent).
         """
-        return self.get_context_for_agent(reviewing_agent_role)
+        return self.get_context_for_agent(reviewing_agent_role, depth=depth)
 
     def _combine_cheat_sheets(self, file_names: List[str]) -> str:
         """Combine multiple cheat sheets into a single context string.
@@ -132,6 +142,30 @@ class Librarian:
             except KeyError:
                 print(f"Warning: Cheat sheet not found: {name}")
 
+        return "\n\n".join(sections)
+
+    def _combine_from_library(self, file_names: List[str]) -> str:
+        """Combine full Bible texts from library_dir; fall back to cheat sheet if missing."""
+        sections = []
+        for name in file_names:
+            lib_path = self.library_dir / name
+            if lib_path.exists():
+                try:
+                    content = lib_path.read_text(encoding="utf-8")
+                    sections.append(f"{'='*60}\n{name.upper()}\n{'='*60}\n\n{content}")
+                except Exception as e:
+                    print(f"Warning: Could not read {lib_path}: {e}")
+                    try:
+                        content = self.get_cheat_sheet(name)
+                        sections.append(f"{'='*60}\n{name.upper()}\n{'='*60}\n\n{content}")
+                    except KeyError:
+                        pass
+            else:
+                try:
+                    content = self.get_cheat_sheet(name)
+                    sections.append(f"{'='*60}\n{name.upper()}\n{'='*60}\n\n{content}")
+                except KeyError:
+                    print(f"Warning: Neither library nor cheat sheet found: {name}")
         return "\n\n".join(sections)
 
     def list_available_cheat_sheets(self) -> List[str]:

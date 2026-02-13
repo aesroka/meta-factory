@@ -120,6 +120,18 @@ def main() -> None:
         default=5.0,
         help="Max cost USD (default: 5.0).",
     )
+    parser.add_argument(
+        "--context-mode",
+        choices=["rag", "full", "hybrid"],
+        default="rag",
+        help="Context mode for ingestion when using RAG pipeline (default: rag).",
+    )
+    parser.add_argument(
+        "--quality",
+        choices=["standard", "premium"],
+        default="standard",
+        help="standard = RAG-only; premium = hybrid context (default: standard).",
+    )
     args = parser.parse_args()
 
     workspace_dir = REPO_ROOT / "workspace"

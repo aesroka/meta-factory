@@ -119,7 +119,7 @@ class LiteLLMProvider(LLMProvider):
             {"role": "user", "content": user_message},
         ]
         metadata = {**self._metadata}
-        if resolved_model in ("tier1", "tier2", "tier3"):
+        if resolved_model in ("tier0", "tier1", "tier2", "tier3"):
             from .router import get_router
             response = get_router().completion(
                 model=resolved_model,

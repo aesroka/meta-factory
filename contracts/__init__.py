@@ -73,6 +73,8 @@ from .project import (
     ProjectDossier,
 )
 
+from .reconciliation import DossierReconciliation
+
 __all__ = [
     # Router
     "InputType",
@@ -128,4 +130,6 @@ __all__ = [
     "TechConstraint",
     "CoreLogicFlow",
     "ProjectDossier",
+    # Reconciliation (Phase 6)
+    "DossierReconciliation",
 ]

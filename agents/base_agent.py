@@ -60,6 +60,7 @@ class BaseAgent(ABC):
         librarian: Optional[Librarian] = None,
         model: Optional[str] = None,
         provider: Optional[str] = None,
+        depth: Optional[str] = None,
     ):
         """Initialize the agent.
 
@@ -71,6 +72,8 @@ class BaseAgent(ABC):
             model: Override the default model (e.g., 'gpt-4o', 'gemini-pro', 'deepseek-chat')
             provider: Explicit provider name (anthropic, openai, gemini, deepseek)
                      If not specified, auto-detected from model name or defaults to anthropic
+            depth: Bible context depth — "cheat_sheet" (default for tier1/tier2) or "full" (tier0/tier3).
+                   If None, derived from DEFAULT_TIER.
         """
         self.role = role
         self.system_prompt = system_prompt
@@ -78,6 +81,10 @@ class BaseAgent(ABC):
         self.model = model
 
         self.librarian = librarian or Librarian()
+        default_tier = getattr(self.__class__, "DEFAULT_TIER", None)
+        self._context_depth = depth if depth is not None else (
+            "full" if default_tier in ("tier0", "tier3") else "cheat_sheet"
+        )
         self.bible_context = self._load_bible_context()
 
         # Get the LLM provider (when model is None, we may use DEFAULT_TIER for routing)
@@ -90,9 +97,9 @@ class BaseAgent(ABC):
         self.total_usage = TokenUsage()
 
     def _load_bible_context(self) -> str:
-        """Load Bible context for this agent's role."""
+        """Load Bible context for this agent's role (depth: cheat_sheet or full)."""
         try:
-            return self.librarian.get_context_for_agent(self.role)
+            return self.librarian.get_context_for_agent(self.role, depth=getattr(self, "_context_depth", "cheat_sheet"))
         except ValueError:
             # Role not in mapping, return empty context
             return ""

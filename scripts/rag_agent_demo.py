@@ -42,6 +42,20 @@ RAG_QUERIES = [
 ]
 
 
+def _build_raw_documents(workspace_dir: Path) -> str:
+    """Concatenate workspace files for full-context/hybrid ingestion."""
+    from config import settings
+    exts = {".txt", ".md", ".py", ".js", ".ts", ".java", ".json", ".yaml", ".yml", ".html"}
+    parts = []
+    for p in sorted(workspace_dir.rglob("*")):
+        if p.is_file() and p.suffix.lower() in exts:
+            try:
+                parts.append(f"--- {p.name} ---\n{p.read_text(encoding='utf-8', errors='replace')}")
+            except Exception:
+                pass
+    return "\n\n".join(parts) if parts else ""
+
+
 def build_rag_transcript(rag_search_fn, dataset_id: str | None, top_k: int = 5) -> str:
     """Build a single transcript-like string from RAG search results."""
     sections = []
@@ -110,6 +124,18 @@ def main() -> None:
         action="store_true",
         help="Run both raw (full) and dossier (full-dossier) pipelines and print cost comparison.",
     )
+    parser.add_argument(
+        "--context-mode",
+        choices=["rag", "full", "hybrid"],
+        default="rag",
+        help="Ingestion context: rag (RAG only), full (full-context only), hybrid (both + reconcile). Default: rag.",
+    )
+    parser.add_argument(
+        "--quality",
+        choices=["standard", "premium"],
+        default="standard",
+        help="standard = RAG-only; premium = hybrid context. Default: standard.",
+    )
     args = parser.parse_args()
 
     from config import settings
@@ -169,6 +195,11 @@ def main() -> None:
         else:
             print("[WARN] RAGFlow client not available; RAG context may be empty.")
 
+    # Resolve quality → context_mode
+    context_mode = args.context_mode
+    if args.quality == "premium":
+        context_mode = "hybrid"
+
     # --- Step 2: Build transcript from RAG retrieval (discovery/full/compare) or note for dossier ---
     mode = args.mode or ("full" if args.full else "discovery")
     if args.compare:
@@ -225,7 +256,11 @@ def main() -> None:
         ingestion = IngestionSwarm(
             librarian=lib, run_id="compare_ingestion", provider=args.provider, model=args.model,
         )
-        ingest_result = ingestion.execute(IngestionInput(client_name=args.client, dataset_id=dataset_id))
+        raw_docs = _build_raw_documents(workspace_dir) if context_mode in ("full", "hybrid") else None
+        ingest_result = ingestion.execute(IngestionInput(
+            client_name=args.client, dataset_id=dataset_id,
+            context_mode=context_mode, raw_documents=raw_docs,
+        ))
         dossier = ingest_result.get("artifacts", {}).get("mining")
         if dossier is None:
             print("[ERROR] Ingestion did not produce a dossier for compare run.")
@@ -257,7 +292,11 @@ def main() -> None:
             provider=args.provider,
             model=args.model,
         )
-        ingest_result = ingestion.execute(IngestionInput(client_name=args.client, dataset_id=dataset_id))
+        raw_docs = _build_raw_documents(workspace_dir) if context_mode in ("full", "hybrid") else None
+        ingest_result = ingestion.execute(IngestionInput(
+            client_name=args.client, dataset_id=dataset_id,
+            context_mode=context_mode, raw_documents=raw_docs,
+        ))
         dossier = ingest_result.get("artifacts", {}).get("mining")
         if dossier is None:
             print("[ERROR] Ingestion did not produce a dossier.")
@@ -330,7 +369,14 @@ def main() -> None:
             model=args.model,
         )
         try:
-            result = swarm.execute(IngestionInput(client_name=args.client, dataset_id=dataset_id, mode=None))
+            raw_docs = _build_raw_documents(workspace_dir) if context_mode in ("full", "hybrid") else None
+            result = swarm.execute(IngestionInput(
+                client_name=args.client,
+                dataset_id=dataset_id,
+                mode=None,
+                context_mode=context_mode,
+                raw_documents=raw_docs,
+            ))
         except Exception as e:
             print(f"[ERROR] Ingestion failed: {e}")
             raise

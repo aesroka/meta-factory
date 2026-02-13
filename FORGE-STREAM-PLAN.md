@@ -697,13 +697,13 @@ The Librarian already has two paths: `cheat_sheets/` and `library/` (full texts)
 
 ---
 
-### Phase 6: Hybrid Context Strategy
+### Phase 6: Hybrid Context Strategy ✅
 
 *Goal: For high-value engagements, produce the best possible ProjectDossier by running both full-context and RAG extraction, then reconciling. Add a "premium" quality tier that sacrifices cost for comprehensiveness.*
 
 #### 6.1 Add Tier 0 ("Oracle") to the Router
 
-- [ ] Add tier0 entries to `providers/router.py`:
+- [x] Add tier0 entries to `providers/router.py`:
 
 ```python
 # Tier 0: Oracle — full-context analysis (massive context windows)

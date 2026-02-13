@@ -6,8 +6,11 @@ _tier_router = None
 
 
 def get_tier_model_list() -> List[Dict[str, Any]]:
-    """Build model_list for tier1/tier2/tier3. Override via config if needed."""
+    """Build model_list for tier0/tier1/tier2/tier3. Override via config if needed."""
     return [
+        # Tier 0: Oracle — full-context analysis (massive context windows)
+        {"model_name": "tier0", "litellm_params": {"model": "gemini/gemini-2.5-pro"}},
+        {"model_name": "tier0", "litellm_params": {"model": "anthropic/claude-opus-4-20250514"}, "order": 2},
         # Tier 1: cheap — extraction, mining
         {"model_name": "tier1", "litellm_params": {"model": "gpt-4o-mini"}},
         {"model_name": "tier1", "litellm_params": {"model": "gemini/gemini-2.0-flash"}, "order": 2},
