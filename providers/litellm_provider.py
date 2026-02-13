@@ -119,19 +119,30 @@ class LiteLLMProvider(LLMProvider):
             {"role": "user", "content": user_message},
         ]
         metadata = {**self._metadata}
+
+        # Clamp max_tokens to model limits (DeepSeek caps at 8192)
+        _MODEL_MAX_TOKENS = {"deepseek": 8192}
+        effective_max_tokens = max_tokens
+        model_lower = resolved_model.lower() if resolved_model else ""
+        for prefix, limit in _MODEL_MAX_TOKENS.items():
+            if prefix in model_lower:
+                effective_max_tokens = min(max_tokens, limit)
+                break
+
         if resolved_model in ("tier0", "tier1", "tier2", "tier3"):
             from .router import get_router
+            # For tier routing, don't pass max_tokens — let the Router/model use its own max.
+            # This avoids sending 8192 to a model that caps lower, or under-using one that supports more.
             response = get_router().completion(
                 model=resolved_model,
                 messages=messages,
-                max_tokens=max_tokens,
                 metadata=metadata,
             )
         else:
             response = litellm.completion(
                 model=resolved_model,
                 messages=messages,
-                max_tokens=max_tokens,
+                max_tokens=effective_max_tokens,
                 metadata=metadata,
             )
 

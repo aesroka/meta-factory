@@ -100,7 +100,7 @@ class ProposalDocument(BaseModel):
     appendices: List[str] = Field(default_factory=list, description="References to detailed appendix documents")
 
     def to_markdown(self) -> str:
-        """Convert proposal to markdown format."""
+        """Convert proposal to a human-readable markdown report."""
         sections = [
             f"# {self.title}",
             f"\n**Prepared for:** {self.client_name}",
@@ -120,9 +120,73 @@ class ProposalDocument(BaseModel):
             self.proposed_solution,
             "\n## Technical Approach",
             self.technical_approach,
-            "\n## Project Milestones",
-            *[f"### {m.name}\n{m.description}\n\n**Deliverables:**\n" + "\n".join(f"- {d}" for d in m.deliverables) for m in self.milestones],
+        ]
+
+        # Delivery phases (the main human-readable plan)
+        if self.delivery_phases:
+            sections.append("\n---\n")
+            sections.append("## Delivery Phases")
+            if self.recommended_first_phase:
+                sections.append(f"\n**Recommended starting phase:** {self.recommended_first_phase}\n")
+            for phase in self.delivery_phases:
+                stop_label = "Yes" if phase.can_stop_here else "No"
+                sections.append(f"### {phase.phase_name} ({phase.phase_type.upper()})")
+                sections.append(f"\n**Goal:** {phase.goal}\n")
+                sections.append(f"**Estimated effort:** {phase.estimated_hours:.0f} hours / ~{phase.estimated_weeks} weeks")
+                if phase.estimated_cost_gbp:
+                    sections.append(f"**Estimated cost:** {phase.estimated_cost_gbp:,.0f} GBP")
+                sections.append(f"**Can stop here with standalone value:** {stop_label}\n")
+                if phase.prerequisites:
+                    sections.append(f"**Prerequisites:** {', '.join(phase.prerequisites)}\n")
+                sections.append("**Success criteria:**\n")
+                for sc in phase.success_criteria:
+                    sections.append(f"- {sc}")
+                if phase.milestones:
+                    sections.append("\n**Milestones:**\n")
+                    for m in phase.milestones:
+                        sections.append(f"- **{m.name}** ({m.estimated_hours:.0f}h): {m.description}")
+                        for d in m.deliverables:
+                            sections.append(f"  - {d}")
+                sections.append("")
+
+            if self.total_estimated_hours or self.total_estimated_weeks:
+                parts = []
+                if self.total_estimated_hours:
+                    parts.append(f"{self.total_estimated_hours:.0f} hours")
+                if self.total_estimated_weeks:
+                    parts.append(f"~{self.total_estimated_weeks} weeks")
+                sections.append(f"**Total across all phases:** {' / '.join(parts)}\n")
+
+        # Legacy milestones section (for proposals without delivery_phases)
+        if self.milestones and not self.delivery_phases:
+            sections.append("\n## Project Milestones")
+            for m in self.milestones:
+                sections.append(f"### {m.name}\n{m.description}\n")
+                sections.append("**Deliverables:**\n")
+                for d in m.deliverables:
+                    sections.append(f"- {d}")
+
+        sections.extend([
             f"\n## Timeline\n\nEstimated duration: **{self.timeline_weeks} weeks**",
             f"\n## Investment\n\n{self.investment}",
-        ]
+        ])
+
+        # Key risks
+        if self.engagement_summary.key_risks:
+            sections.append("\n## Key Risks\n")
+            sections.append("| Risk | Probability | Impact | Mitigation |")
+            sections.append("|------|-------------|--------|------------|")
+            for r in self.engagement_summary.key_risks:
+                sections.append(f"| {r.risk} | {r.probability} | {r.impact} | {r.mitigation} |")
+
+        # Assumptions and out-of-scope
+        if self.engagement_summary.assumptions:
+            sections.append("\n## Assumptions\n")
+            for a in self.engagement_summary.assumptions:
+                sections.append(f"- {a}")
+        if self.engagement_summary.out_of_scope:
+            sections.append("\n## Out of Scope\n")
+            for o in self.engagement_summary.out_of_scope:
+                sections.append(f"- {o}")
+
         return "\n".join(sections)

@@ -32,3 +32,9 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Run outputs (each run writes to outputs/<run_id>/)
+# Kept off git; see outputs/sample/ for an example of what a run produces.
+outputs/*
+!outputs/sample/
+!outputs/sample/**

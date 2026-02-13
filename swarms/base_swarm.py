@@ -262,6 +262,11 @@ class BaseSwarm(ABC):
                 data = artifact
             artifact_path.write_text(json.dumps(data, indent=2, default=str))
 
+            # Write human-readable markdown for the proposal
+            if name == "proposal" and hasattr(artifact, 'to_markdown'):
+                md_path = output_path / "proposal.md"
+                md_path.write_text(artifact.to_markdown())
+
         # Save run metadata
         run_meta = {
             "run_id": self.run.run_id,

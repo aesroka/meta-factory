@@ -281,16 +281,18 @@ class TestEstimationContracts:
         assert estimate.expected_hours == 16.0
 
     def test_pert_estimate_validation(self):
-        """Test that PERT math is validated."""
-        with pytest.raises(ValueError):
-            PERTEstimate(
-                task="Test",
-                optimistic_hours=10.0,
-                likely_hours=15.0,
-                pessimistic_hours=26.0,
-                expected_hours=20.0,  # Wrong: should be 16.0
-                std_dev=2.67,
-            )
+        """Test that PERT math is auto-corrected when LLM returns wrong values."""
+        # Wrong expected_hours (20.0) and std_dev; validators correct to (O+4M+P)/6 and (P-O)/6
+        estimate = PERTEstimate(
+            task="Test",
+            optimistic_hours=10.0,
+            likely_hours=15.0,
+            pessimistic_hours=26.0,
+            expected_hours=20.0,  # Wrong: should be 16.0
+            std_dev=2.67,
+        )
+        assert estimate.expected_hours == 16.0  # (10 + 60 + 26) / 6
+        assert estimate.std_dev == round((26 - 10) / 6, 2)  # 2.67
 
     def test_cone_of_uncertainty(self):
         cone = ConeOfUncertainty(

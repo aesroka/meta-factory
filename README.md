@@ -61,6 +61,18 @@ python main.py --input ./transcript.txt --client "Acme" --quality premium
 python main.py --input ./transcript.txt --client "Acme" --hourly-rate 200
 ```
 
+## Outputs
+
+Each run writes to `outputs/<run_id>/` (e.g. `outputs/run_20260213_145954/`): JSON artifacts plus a human-readable **`proposal.md`**. These directories are **gitignored** so run outputs are not committed. A single sample lives in `outputs/sample/` so you can see the format.
+
+To avoid clutter, delete old runs or keep only the last N:
+
+```bash
+python scripts/clean_outputs.py --keep 5
+python scripts/clean_outputs.py --older-than-days 7
+python scripts/clean_outputs.py   # delete all run dirs
+```
+
 ## Usage
 
 ```bash

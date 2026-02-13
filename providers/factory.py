@@ -46,11 +46,12 @@ def get_provider(
 
 def list_providers() -> Dict[str, bool]:
     """List all providers and their availability (via env keys)."""
+    # LiteLLM uses GOOGLE_API_KEY for Gemini (Google AI Studio)
     keys = {
         "anthropic": "ANTHROPIC_API_KEY",
         "openai": "OPENAI_API_KEY",
-        "gemini": "GEMINI_API_KEY",
-        "google": "GEMINI_API_KEY",
+        "gemini": "GOOGLE_API_KEY",
+        "google": "GOOGLE_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY",
     }
     result = {}

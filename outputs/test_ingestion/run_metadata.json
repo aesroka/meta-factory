@@ -1,8 +1,8 @@
 {
   "run_id": "test_ingestion",
   "mode": "ingestion",
-  "started_at": "2026-02-13T10:17:34.435224",
-  "completed_at": "2026-02-13T10:17:34.449591",
+  "started_at": "2026-02-13T16:09:58.801730",
+  "completed_at": "2026-02-13T16:09:58.811244",
   "status": "completed",
   "token_usage": {
     "input_tokens": 90,

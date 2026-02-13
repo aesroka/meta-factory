@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     # Cost controls
     max_tokens_per_agent_call: int = Field(
-        default=4096,
+        default=8192,
         description="Maximum tokens per individual agent call"
     )
     max_cost_per_run_usd: float = Field(
