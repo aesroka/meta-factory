@@ -72,6 +72,8 @@ class EngagementManager:
         force_mode: Optional[Mode] = None,
         provider: Optional[str] = None,
         model: Optional[str] = None,
+        quality: str = "standard",
+        hourly_rate: float = 150.0,
     ) -> Dict[str, Any]:
         """Execute a complete Meta-Factory run.
 
@@ -83,6 +85,8 @@ class EngagementManager:
             force_mode: Override automatic mode selection
             provider: LLM provider override for this run
             model: Model name override for this run
+            quality: standard or premium (affects ensemble estimation)
+            hourly_rate: GBP per hour for cost estimates
 
         Returns:
             Dictionary with run results, artifacts, and cost manifest
@@ -143,6 +147,7 @@ class EngagementManager:
             swarm_input = GreenfieldInput(
                 transcript=input_content,
                 client_name=client_name,
+                ensemble=(quality == "premium"),
             )
             return swarm.execute(swarm_input)
 
@@ -263,6 +268,8 @@ def run_factory(
     max_cost_usd: Optional[float] = None,
     provider: Optional[str] = None,
     model: Optional[str] = None,
+    quality: str = "standard",
+    hourly_rate: float = 150.0,
 ) -> Dict[str, Any]:
     """Convenience function to run the Meta-Factory.
 
@@ -275,6 +282,8 @@ def run_factory(
         max_cost_usd: Maximum cost budget
         provider: LLM provider (anthropic, openai, gemini, deepseek)
         model: Model name (e.g. gpt-4o, gemini-1.5-pro)
+        quality: standard (RAG, single estimator) or premium (hybrid, ensemble)
+        hourly_rate: GBP per hour for cost estimates
 
     Returns:
         Run results dictionary
@@ -292,4 +301,6 @@ def run_factory(
         force_mode=force_mode,
         provider=provider,
         model=model,
+        quality=quality,
+        hourly_rate=hourly_rate,
     )

@@ -61,6 +61,7 @@ from .proposal_contracts import (
     ExecutiveSummary,
     Milestone,
     RiskItem,
+    DeliveryPhase,
     EngagementSummary,
     ProposalDocument,
 )
@@ -122,6 +123,7 @@ __all__ = [
     "ExecutiveSummary",
     "Milestone",
     "RiskItem",
+    "DeliveryPhase",
     "EngagementSummary",
     "ProposalDocument",
     # Project (Forge-Stream Dossier)

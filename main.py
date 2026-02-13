@@ -131,6 +131,18 @@ def read_input_content(input_path: str) -> str:
     is_flag=True,
     help="Verbose output"
 )
+@click.option(
+    "--quality",
+    type=click.Choice(["standard", "premium"]),
+    default="standard",
+    help="standard = RAG-only, single estimator; premium = hybrid context, ensemble estimation"
+)
+@click.option(
+    "--hourly-rate",
+    type=float,
+    default=150,
+    help="Hourly rate in GBP for cost estimates (default: 150)"
+)
 def main(
     input_path: str,
     client_name: str,
@@ -143,6 +155,8 @@ def main(
     classify_only: bool,
     list_providers: bool,
     verbose: bool,
+    quality: str,
+    hourly_rate: float,
 ):
     """Meta-Factory: Autonomous AI Proposal System.
 
@@ -244,6 +258,8 @@ def main(
             max_cost_usd=max_cost,
             provider=provider,
             model=model,
+            quality=quality,
+            hourly_rate=hourly_rate,
         )
 
         progress.update(task, completed=True)

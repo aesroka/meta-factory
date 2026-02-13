@@ -42,6 +42,20 @@ class RiskItem(BaseModel):
     mitigation: str = Field(...)
 
 
+class DeliveryPhase(BaseModel):
+    """A distinct release phase with its own value proposition (Phase 9)."""
+    phase_name: str = Field(..., description="e.g. 'POC', 'MVP', 'V1', 'V1.1 – Analytics Extension'")
+    phase_type: str = Field(..., description="poc, mvp, v1, extension")
+    goal: str = Field(..., description="What this phase proves or delivers — one sentence")
+    success_criteria: List[str] = Field(..., min_length=1, description="How we know this phase is done")
+    milestones: List[Milestone] = Field(..., min_length=1)
+    estimated_hours: float = Field(..., ge=0, description="PERT expected hours for this phase")
+    estimated_weeks: int = Field(..., ge=1)
+    estimated_cost_gbp: Optional[float] = Field(None, description="Cost at the given hourly rate")
+    can_stop_here: bool = Field(..., description="True if the client gets standalone value from just this phase")
+    prerequisites: List[str] = Field(default_factory=list, description="Which prior phases must complete first")
+
+
 class EngagementSummary(BaseModel):
     """Complete engagement summary merging all upstream artifacts."""
     scqa: SCQAFrame = Field(...)
@@ -71,6 +85,14 @@ class ProposalDocument(BaseModel):
 
     milestones: List[Milestone] = Field(...)
     timeline_weeks: int = Field(..., ge=1)
+
+    delivery_phases: List[DeliveryPhase] = Field(
+        default_factory=list,
+        description="POC → MVP → V1 → Extensions. Each phase delivers standalone value.",
+    )
+    recommended_first_phase: Optional[str] = Field(None, description="Which phase to start with — usually POC or MVP")
+    total_estimated_hours: Optional[float] = Field(None, ge=0)
+    total_estimated_weeks: Optional[int] = Field(None, ge=1)
 
     investment: str = Field(..., description="Investment/pricing section")
     terms_and_conditions: Optional[str] = Field(None)
