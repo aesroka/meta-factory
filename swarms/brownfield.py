@@ -30,7 +30,9 @@ from contracts import (
     PainMonetizationMatrix,
     PainPoint,
     Frequency,
+    ProjectDossier,
 )
+from contracts.adapters import dossier_to_legacy_input
 from librarian import Librarian
 
 
@@ -39,17 +41,19 @@ class BrownfieldInput:
 
     def __init__(
         self,
-        codebase_description: str,
-        client_name: str,
+        codebase_description: str = "",
+        client_name: str = "",
         code_samples: Optional[str] = None,
         known_issues: Optional[list[str]] = None,
         change_requirements: Optional[str] = None,
+        dossier: Optional[ProjectDossier] = None,
     ):
         self.codebase_description = codebase_description
         self.client_name = client_name
         self.code_samples = code_samples
         self.known_issues = known_issues
         self.change_requirements = change_requirements
+        self.dossier = dossier
 
 
 class BrownfieldSwarm(BaseSwarm):
@@ -116,8 +120,12 @@ class BrownfieldSwarm(BaseSwarm):
             provider=self.provider,
             model=self.model,
         )
+        if input_data.dossier is not None:
+            codebase_description = dossier_to_legacy_input(input_data.dossier)
+        else:
+            codebase_description = input_data.codebase_description or ""
         agent_input = LegacyInput(
-            codebase_description=input_data.codebase_description,
+            codebase_description=codebase_description,
             code_samples=input_data.code_samples,
             known_issues=input_data.known_issues,
             change_requirements=input_data.change_requirements,

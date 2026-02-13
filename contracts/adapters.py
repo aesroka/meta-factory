@@ -42,3 +42,31 @@ def dossier_to_discovery_input(dossier: ProjectDossier) -> DiscoveryInput:
         sections.append(f"## Legacy / Tech Debt\n{dossier.legacy_debt_summary}")
 
     return DiscoveryInput(transcript="\n\n".join(sections))
+
+
+def dossier_to_legacy_input(dossier: ProjectDossier) -> str:
+    """Render a ProjectDossier as a codebase description for the Legacy Agent.
+
+    Used when Brownfield/Greyfield run with a pre-built Dossier (e.g. from Ingestion).
+    """
+    sections = [f"# Project: {dossier.project_name}\n\n{dossier.summary}"]
+
+    if dossier.tech_stack_detected:
+        sections.append("## Tech Stack\n" + ", ".join(dossier.tech_stack_detected))
+
+    if dossier.constraints:
+        lines = ["## Constraints"]
+        for c in dossier.constraints:
+            lines.append(f"- {c.category}: {c.requirement} ({c.priority})")
+        sections.append("\n".join(lines))
+
+    if dossier.logic_flows:
+        lines = ["## Core Flows"]
+        for f in dossier.logic_flows:
+            lines.append(f"- {f.trigger} → {f.process} → {f.outcome}")
+        sections.append("\n".join(lines))
+
+    if dossier.legacy_debt_summary:
+        sections.append(f"## Legacy / Tech Debt\n{dossier.legacy_debt_summary}")
+
+    return "\n\n".join(sections)

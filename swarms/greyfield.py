@@ -38,7 +38,9 @@ from contracts import (
     EngagementSummary,
     ProposalDocument,
     ConstraintList,
+    ProjectDossier,
 )
+from contracts.adapters import dossier_to_discovery_input, dossier_to_legacy_input
 from librarian import Librarian
 
 
@@ -47,13 +49,14 @@ class GreyfieldInput:
 
     def __init__(
         self,
-        transcript: str,
-        codebase_description: str,
-        client_name: str,
+        transcript: str = "",
+        codebase_description: str = "",
+        client_name: str = "",
         context: Optional[str] = None,
         code_samples: Optional[str] = None,
         known_issues: Optional[list[str]] = None,
         quality_priorities: Optional[list[str]] = None,
+        dossier: Optional[ProjectDossier] = None,
     ):
         self.transcript = transcript
         self.codebase_description = codebase_description
@@ -62,6 +65,7 @@ class GreyfieldInput:
         self.code_samples = code_samples
         self.known_issues = known_issues
         self.quality_priorities = quality_priorities
+        self.dossier = dossier
 
 
 class GreyfieldSwarm(BaseSwarm):
@@ -143,19 +147,33 @@ class GreyfieldSwarm(BaseSwarm):
         discovery_result = None
         legacy_result = None
 
+        if input_data.dossier is not None:
+            discovery_input = dossier_to_discovery_input(input_data.dossier)
+            transcript = discovery_input.transcript
+            context = getattr(discovery_input, "context", None)
+            codebase_description = dossier_to_legacy_input(input_data.dossier)
+            code_samples = input_data.code_samples
+            known_issues = input_data.known_issues
+        else:
+            transcript = input_data.transcript or ""
+            context = input_data.context
+            codebase_description = input_data.codebase_description or ""
+            code_samples = input_data.code_samples
+            known_issues = input_data.known_issues
+
         # Run in parallel using ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=2) as executor:
             # Submit both tasks
             discovery_future = executor.submit(
                 self._run_discovery,
-                input_data.transcript,
-                input_data.context,
+                transcript,
+                context,
             )
             legacy_future = executor.submit(
                 self._run_legacy_analysis,
-                input_data.codebase_description,
-                input_data.code_samples,
-                input_data.known_issues,
+                codebase_description,
+                code_samples,
+                known_issues,
             )
 
             # Collect results

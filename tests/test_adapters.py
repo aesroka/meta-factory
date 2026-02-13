@@ -3,7 +3,7 @@
 import pytest
 from contracts import ProjectDossier, Stakeholder, TechConstraint, CoreLogicFlow
 from agents import DiscoveryInput
-from contracts.adapters import dossier_to_discovery_input
+from contracts.adapters import dossier_to_discovery_input, dossier_to_legacy_input
 
 
 def test_dossier_to_discovery_input_produces_valid_discovery_input():
@@ -91,3 +91,24 @@ def test_legacy_debt_included_only_when_present():
     result_with = dossier_to_discovery_input(dossier_with)
     assert "Legacy" in result_with.transcript or "Tech Debt" in result_with.transcript
     assert "Monolith from 2010" in result_with.transcript
+
+
+def test_dossier_to_legacy_input_produces_codebase_description():
+    """dossier_to_legacy_input renders dossier as codebase description for Legacy agent."""
+    dossier = ProjectDossier(
+        project_name="LegacyApp",
+        summary="Legacy system with Java backend.",
+        stakeholders=[],
+        tech_stack_detected=["Java", "Oracle"],
+        constraints=[
+            TechConstraint(category="DB", requirement="Oracle only", priority="Must-have"),
+        ],
+        logic_flows=[],
+        legacy_debt_summary="No tests, tight coupling.",
+    )
+    result = dossier_to_legacy_input(dossier)
+    assert isinstance(result, str)
+    assert "LegacyApp" in result
+    assert "Java" in result
+    assert "Oracle" in result
+    assert "Legacy / Tech Debt" in result or "legacy_debt" in result.lower() or "No tests" in result
