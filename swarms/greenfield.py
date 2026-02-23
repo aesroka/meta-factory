@@ -398,11 +398,19 @@ class GreenfieldSwarm(BaseSwarm):
         )
 
         if not ensemble:
-            agent = EstimatorAgent(
-                librarian=self.librarian,
-                provider=self.provider,
-                model=self.model,
-            )
+            if getattr(self, "use_reference_forecast", False):
+                from agents.reference_estimator import ReferenceEstimator
+                agent = ReferenceEstimator(
+                    librarian=self.librarian,
+                    provider=self.provider,
+                    model=self.model,
+                )
+            else:
+                agent = EstimatorAgent(
+                    librarian=self.librarian,
+                    provider=self.provider,
+                    model=self.model,
+                )
             output, _passed, _escalation = self.run_with_critique(
                 agent=agent,
                 input_data=agent_input,

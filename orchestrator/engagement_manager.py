@@ -77,6 +77,7 @@ class EngagementManager:
         run_id: Optional[str] = None,
         baseline: Optional[str] = None,
         variation: Optional[str] = None,
+        use_reference_forecast: bool = False,
     ) -> Dict[str, Any]:
         """Execute a complete Meta-Factory run.
 
@@ -98,6 +99,7 @@ class EngagementManager:
         self._current_run_id = run_id or f"run_{self._run_started.strftime('%Y%m%d_%H%M%S')}"
         self._baseline = baseline
         self._variation = variation
+        self._use_reference_forecast = use_reference_forecast
 
         try:
             # Step 1: Route the input
@@ -206,6 +208,7 @@ class EngagementManager:
             )
             swarm.variation = getattr(self, "_variation", None)
             swarm.baseline = getattr(self, "_baseline", None)
+            swarm.use_reference_forecast = getattr(self, "_use_reference_forecast", False)
             swarm_input = GreenfieldInput(
                 transcript=input_content,
                 client_name=client_name,
@@ -344,6 +347,7 @@ def run_factory(
     run_id: Optional[str] = None,
     baseline: Optional[str] = None,
     variation: Optional[str] = None,
+    use_reference_forecast: bool = False,
 ) -> Dict[str, Any]:
     """Convenience function to run the Meta-Factory.
 
@@ -392,4 +396,5 @@ def run_factory(
         run_id=run_id,
         baseline=baseline,
         variation=variation,
+        use_reference_forecast=use_reference_forecast,
     )

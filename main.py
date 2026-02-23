@@ -181,6 +181,11 @@ def read_input_content(input_path: str) -> str:
     default="default",
     help="Prompt variant for agents that load from YAML (default, concise, experimental)."
 )
+@click.option(
+    "--use-reference-forecast",
+    is_flag=True,
+    help="Apply reference class forecasting corrections from historical data."
+)
 def main(
     input_path: Optional[str],
     client_name: Optional[str],
@@ -201,6 +206,7 @@ def main(
     new_run_id: Optional[str],
     variation: Optional[str],
     prompt_variant: str,
+    use_reference_forecast: bool,
 ):
     """Meta-Factory: Autonomous AI Proposal System.
 
@@ -373,6 +379,7 @@ def main(
                 run_id=run_id,
                 baseline=baseline,
                 variation=variation,
+                use_reference_forecast=use_reference_forecast,
             )
 
         progress.update(task, completed=True)
