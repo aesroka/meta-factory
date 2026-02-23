@@ -1,5 +1,6 @@
 """Tests for RAGFlow client and Librarian RAG integration (Forge-Stream Phase 1)."""
 
+import os
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -14,8 +15,9 @@ class TestRAGFlowClientWithoutServer:
         """Without API key, client is not available."""
         from librarian.rag_client import RAGFlowClient
 
-        with patch.dict("os.environ", {}, clear=False):
-            # Ensure no key in settings
+        with patch.dict("os.environ", {}, clear=False), patch.object(
+            settings, "ragflow_api_key", ""
+        ):
             client = RAGFlowClient(api_key="")
             assert client.is_available() is False
 

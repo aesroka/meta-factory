@@ -2,6 +2,35 @@
 
 An autonomous AI system that ingests diverse inputs (rough ideas, transcripts, existing codebases) and orchestrates specialised multi-agent swarms to produce production-ready software proposals.
 
+## 5-Minute Quickstart
+
+1. **Install dependencies:**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. **Set OpenAI API key:**
+   ```bash
+   export OPENAI_API_KEY=sk-...
+   ```
+   Or copy `.env.example` to `.env` and edit.
+
+3. **Run your first proposal:**
+   ```bash
+   python main.py --input ./workspace/sample_transcript.txt --client "Acme Corp"
+   ```
+
+4. **Check the output:**
+   ```bash
+   cat outputs/run_*/proposal.md
+   ```
+
+Done! The system generated a phased proposal (POC → MVP → V1) with cost estimates.
+
+**Cost:** ~$1–3 per run (standard quality). Premium quality (~$25–50) adds ensemble estimation and hybrid context.
+
 ## Architecture
 
 ### Hub-and-Spoke State Machine

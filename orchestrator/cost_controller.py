@@ -9,7 +9,18 @@ from typing import Dict, List, Optional, Any
 import json
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from config import settings
+
+
+class StageMetrics(BaseModel):
+    """Per-stage timing and cost."""
+    stage: str
+    duration_s: float
+    cost_usd: float
+    tokens_in: int = 0
+    tokens_out: int = 0
 
 
 def _logger():
@@ -46,7 +57,56 @@ class CostController:
     def __init__(self, max_cost_usd: Optional[float] = None):
         """Initialize the cost controller and reset the swarm cost logger for this run."""
         self.max_cost_usd = max_cost_usd or settings.max_cost_per_run_usd
+        self.stage_metrics: List[StageMetrics] = []
         _logger().reset()
+
+    def record_stage(
+        self,
+        stage: str,
+        duration_s: float,
+        cost_usd: float,
+        tokens_in: int = 0,
+        tokens_out: int = 0,
+    ) -> None:
+        """Record one stage's timing and cost (called by swarms)."""
+        self.stage_metrics.append(
+            StageMetrics(
+                stage=stage,
+                duration_s=duration_s,
+                cost_usd=cost_usd,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+            )
+        )
+
+    def generate_summary(self):
+        """Return a Rich Table for cost/timing by stage. Caller prints it."""
+        try:
+            from rich.table import Table
+        except ImportError:
+            return None
+        table = Table(title="Run Summary")
+        table.add_column("Stage", style="cyan")
+        table.add_column("Duration", justify="right")
+        table.add_column("Cost", justify="right", style="green")
+        table.add_column("Tokens", justify="right")
+        for m in self.stage_metrics:
+            table.add_row(
+                m.stage,
+                f"{m.duration_s:.1f}s",
+                f"${m.cost_usd:.3f}",
+                f"{m.tokens_in + m.tokens_out:,}" if (m.tokens_in or m.tokens_out) else "-",
+            )
+        total_cost = sum(m.cost_usd for m in self.stage_metrics)
+        total_time = sum(m.duration_s for m in self.stage_metrics)
+        table.add_row(
+            "TOTAL",
+            f"{total_time:.1f}s",
+            f"${total_cost:.3f}",
+            "",
+            style="bold",
+        )
+        return table
 
     @property
     def total_input_tokens(self) -> int:

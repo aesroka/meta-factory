@@ -131,11 +131,13 @@ class LiteLLMProvider(LLMProvider):
 
         if resolved_model in ("tier0", "tier1", "tier2", "tier3"):
             from .router import get_router
-            # For tier routing, don't pass max_tokens — let the Router/model use its own max.
-            # This avoids sending 8192 to a model that caps lower, or under-using one that supports more.
+            from config import settings
+            # Request enough output tokens to avoid truncated JSON (DeepSeek caps at 8192)
+            tier_max = min(max_tokens, 8192)
             response = get_router().completion(
                 model=resolved_model,
                 messages=messages,
+                max_tokens=tier_max,
                 metadata=metadata,
             )
         else:

@@ -250,7 +250,8 @@ class BaseSwarm(ABC):
         import json
         from pathlib import Path
 
-        output_path = Path(output_dir or settings.output_dir) / self.run_id
+        base = getattr(self, "_output_dir_override", None) or output_dir or settings.output_dir
+        output_path = Path(base) / self.run_id
         output_path.mkdir(parents=True, exist_ok=True)
 
         # Save each artifact

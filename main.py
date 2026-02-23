@@ -16,6 +16,7 @@ import sys
 import json
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 
 try:
     import click
@@ -28,9 +29,11 @@ except ImportError:
 
 from contracts import Mode
 from orchestrator import EngagementManager, run_factory
+from orchestrator.cost_controller import get_cost_controller
 from router import classify_input
 from providers import list_providers as get_available_providers
 from config import settings
+from utils.logging import setup_logging
 
 
 console = Console()
@@ -143,9 +146,16 @@ def read_input_content(input_path: str) -> str:
     default=150,
     help="Hourly rate in GBP for cost estimates (default: 150)"
 )
+@click.option(
+    "--resume",
+    default=None,
+    metavar="RUN_ID",
+    help="Resume from a previous run (e.g. run_20260213_145954). Loads artifacts from outputs/RUN_ID and continues."
+)
 def main(
-    input_path: str,
-    client_name: str,
+    input_path: Optional[str],
+    client_name: Optional[str],
+    resume: Optional[str],
     codebase: Optional[str],
     mode: str,
     max_cost: Optional[float],
@@ -175,12 +185,29 @@ def main(
         return
 
     # Validate required options
-    if not input_path:
-        console.print("[red]Error: --input is required[/red]")
-        sys.exit(1)
-    if not client_name:
-        console.print("[red]Error: --client is required[/red]")
-        sys.exit(1)
+    if resume:
+        if not client_name:
+            console.print("[red]Error: --client is required when using --resume[/red]")
+            sys.exit(1)
+    else:
+        if not input_path:
+            console.print("[red]Error: --input is required[/red]")
+            sys.exit(1)
+        if not client_name:
+            console.print("[red]Error: --client is required[/red]")
+            sys.exit(1)
+
+    # Generate run_id and set up logging (so logs go to outputs/run_id/run.log)
+    run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if not resume else None
+    if run_id:
+        out_base = Path(output_dir or settings.output_dir)
+        logger = setup_logging(run_id, out_base / run_id, verbose=verbose)
+        logger.info(
+            "meta_factory_started",
+            client=client_name,
+            quality=quality,
+            mode=mode or "auto",
+        )
 
     console.print(Panel.fit(
         "[bold blue]Meta-Factory[/bold blue]\n"
@@ -194,53 +221,59 @@ def main(
         if model:
             console.print(f"[dim]Model:[/dim] {model}")
 
-    # Read input content
-    console.print(f"\n[dim]Reading input from:[/dim] {input_path}")
-    input_content = read_input_content(input_path)
-
-    if not input_content.strip():
-        console.print("[red]Error: Input content is empty[/red]")
-        sys.exit(1)
-
-    console.print(f"[dim]Input size:[/dim] {len(input_content):,} characters")
-
-    # Classify input if in auto mode
-    if mode == "auto" or classify_only:
-        console.print("\n[bold]Classifying input...[/bold]")
-        classification = classify_input(
-            input_content, input_path, provider=provider, model=model
-        )
-
-        console.print(f"  [green]Type:[/green] {classification.input_type.value}")
-        console.print(f"  [green]Confidence:[/green] {classification.confidence:.0%}")
-        console.print(f"  [green]Evidence:[/green] {classification.evidence}")
-        console.print(f"  [green]Recommended mode:[/green] {classification.recommended_mode.value}")
-
-        if classify_only:
-            return
-
-    # Determine mode
-    if mode == "auto":
-        force_mode = None
-    else:
-        force_mode = Mode(mode)
-
-    # Read codebase if provided
+    input_content = ""
+    force_mode = None
     codebase_content = None
-    if codebase:
-        console.print(f"\n[dim]Reading codebase from:[/dim] {codebase}")
-        codebase_content = read_input_content(codebase)
-        console.print(f"[dim]Codebase size:[/dim] {len(codebase_content):,} characters")
 
-    # Check for greyfield mode requirements
-    if mode == "greyfield" and not codebase_content:
-        console.print("[red]Error: Greyfield mode requires --codebase argument[/red]")
-        sys.exit(1)
+    if not resume:
+        # Read input content
+        console.print(f"\n[dim]Reading input from:[/dim] {input_path}")
+        input_content = read_input_content(input_path)
 
-    # Run the factory
+        if not input_content.strip():
+            console.print("[red]Error: Input content is empty[/red]")
+            sys.exit(1)
+
+        console.print(f"[dim]Input size:[/dim] {len(input_content):,} characters")
+
+        # Classify input if in auto mode
+        if mode == "auto" or classify_only:
+            console.print("\n[bold]Classifying input...[/bold]")
+            classification = classify_input(
+                input_content, input_path, provider=provider, model=model
+            )
+
+            console.print(f"  [green]Type:[/green] {classification.input_type.value}")
+            console.print(f"  [green]Confidence:[/green] {classification.confidence:.0%}")
+            console.print(f"  [green]Evidence:[/green] {classification.evidence}")
+            console.print(f"  [green]Recommended mode:[/green] {classification.recommended_mode.value}")
+
+            if classify_only:
+                return
+
+        # Determine mode
+        if mode == "auto":
+            force_mode = None
+        else:
+            force_mode = Mode(mode)
+
+        # Read codebase if provided
+        if codebase:
+            console.print(f"\n[dim]Reading codebase from:[/dim] {codebase}")
+            codebase_content = read_input_content(codebase)
+            console.print(f"[dim]Codebase size:[/dim] {len(codebase_content):,} characters")
+
+        # Check for greyfield mode requirements
+        if mode == "greyfield" and not codebase_content:
+            console.print("[red]Error: Greyfield mode requires --codebase argument[/red]")
+            sys.exit(1)
+
+    # Run the factory (or resume)
     console.print(f"\n[bold]Running Meta-Factory...[/bold]")
     console.print(f"  [dim]Client:[/dim] {client_name}")
     console.print(f"  [dim]Max cost:[/dim] ${max_cost or settings.max_cost_per_run_usd}")
+    if resume:
+        console.print(f"  [dim]Resume from:[/dim] {resume}")
 
     with Progress(
         SpinnerColumn(),
@@ -249,18 +282,31 @@ def main(
     ) as progress:
         task = progress.add_task("Processing...", total=None)
 
-        result = run_factory(
-            input_content=input_content,
-            client_name=client_name,
-            input_path=input_path,
-            codebase_content=codebase_content,
-            force_mode=force_mode,
-            max_cost_usd=max_cost,
-            provider=provider,
-            model=model,
-            quality=quality,
-            hourly_rate=hourly_rate,
-        )
+        if resume:
+            result = run_factory(
+                resume_from=resume,
+                client_name=client_name,
+                output_dir=output_dir,
+                max_cost_usd=max_cost,
+                provider=provider,
+                model=model,
+                quality=quality,
+                hourly_rate=hourly_rate,
+            )
+        else:
+            result = run_factory(
+                input_content=input_content,
+                client_name=client_name,
+                input_path=input_path,
+                codebase_content=codebase_content,
+                force_mode=force_mode,
+                max_cost_usd=max_cost,
+                provider=provider,
+                model=model,
+                quality=quality,
+                hourly_rate=hourly_rate,
+                run_id=run_id,
+            )
 
         progress.update(task, completed=True)
 
@@ -269,12 +315,21 @@ def main(
 
     if result.get("status") == "error":
         console.print(f"[red]Error:[/red] {result.get('error')}")
+        output_path = result.get("output_path")
+        if output_path:
+            console.print(f"\n[yellow]Partial results saved to:[/yellow] {output_path}")
         sys.exit(1)
 
     console.print(f"[green]Status:[/green] {result.get('status', 'unknown')}")
     console.print(f"[green]Run ID:[/green] {result.get('run_id')}")
     console.print(f"[green]Mode:[/green] {result.get('mode')}")
     console.print(f"[green]Duration:[/green] {result.get('duration_seconds', 0):.1f}s")
+
+    # Cost/timing summary table (Phase 11)
+    summary_table = get_cost_controller().generate_summary()
+    if summary_table:
+        console.print()
+        console.print(summary_table)
 
     # Token usage
     token_usage = result.get("token_usage", {})

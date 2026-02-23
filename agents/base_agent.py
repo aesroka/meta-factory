@@ -11,6 +11,7 @@ import json
 from abc import ABC, abstractmethod
 from typing import Type, TypeVar, Optional, Any, Dict
 from pydantic import BaseModel, ValidationError
+import structlog
 
 from librarian import Librarian
 from providers import get_provider, LLMProvider
@@ -174,6 +175,14 @@ class BaseAgent(ABC):
             ValidationError: If output validation fails after retries
             Exception: If LLM call fails
         """
+        logger = structlog.get_logger()
+        effective_model = model or self.model
+        logger.info(
+            "agent_run_started",
+            agent=self.role,
+            tier=getattr(self.__class__, "DEFAULT_TIER", "?"),
+            model=effective_model,
+        )
         full_system_prompt = self._build_full_system_prompt()
         base_input = f"# INPUT\n\n{input_data.model_dump_json(indent=2)}"
         critic_block = (
@@ -190,12 +199,19 @@ class BaseAgent(ABC):
             try:
                 # Add error context on retry
                 if attempt > 0 and last_error:
+                    truncation_hint = ""
+                    if "unterminated" in last_error.lower() or "expecting" in last_error.lower():
+                        truncation_hint = (
+                            " Your previous response was truncated or invalid JSON. "
+                            "Provide a complete, valid JSON only (no markdown). "
+                            "Use shorter descriptions if needed to fit within length limits."
+                        )
                     user_message = (
                         base_input
                         + "\n\n# PREVIOUS ERROR\n\n"
                         "Your previous response did not match the required schema. "
                         f"Error: {last_error}\n\n"
-                        "Please fix the issues and provide a valid JSON response."
+                        f"Please fix the issues and provide a valid JSON response.{truncation_hint}"
                         + critic_block
                     )
                     retries = attempt
@@ -219,7 +235,7 @@ class BaseAgent(ABC):
                 # Parse and validate
                 output = self._parse_and_validate(response.content)
 
-                return AgentResult(
+                result = AgentResult(
                     output=output,
                     token_usage=usage,
                     model=response.model,
@@ -227,10 +243,25 @@ class BaseAgent(ABC):
                     raw_response=response.content,
                     retries=retries,
                 )
+                logger.info(
+                    "agent_run_completed",
+                    agent=self.role,
+                    tokens_in=usage.input_tokens,
+                    tokens_out=usage.output_tokens,
+                    cost_usd=usage.total_cost,
+                    retries=retries,
+                )
+                return result
 
             except (json.JSONDecodeError, ValidationError) as e:
                 last_error = str(e)
                 if attempt == max_retries:
+                    logger.error(
+                        "agent_run_failed",
+                        agent=self.role,
+                        error=str(e),
+                        error_type=type(e).__name__,
+                    )
                     raise
 
         # Should not reach here

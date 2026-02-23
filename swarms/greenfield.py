@@ -5,6 +5,8 @@ Discovery Agent → Critic → Architect Agent → Critic →
 Estimator Agent → Critic → Synthesis Agent → Proposal Agent → Critic → OUTPUT
 """
 
+import json
+from pathlib import Path
 from typing import Optional, Any, Dict, TYPE_CHECKING
 from datetime import datetime
 
@@ -73,6 +75,69 @@ class GreenfieldSwarm(BaseSwarm):
     def mode_name(self) -> str:
         return "greenfield"
 
+    def _run_stage_with_retry(self, stage_name: str, stage_fn, *args, **kwargs):
+        """Run a stage once; on failure retry once, then raise."""
+        import time
+        import structlog
+        from orchestrator.cost_controller import get_cost_controller
+        logger = structlog.get_logger()
+        logger.info("stage_started", stage=stage_name, mode=self.mode_name)
+        start = time.time()
+        cost_before = get_cost_controller().total_cost_usd
+        try:
+            out = stage_fn(*args, **kwargs)
+            duration = time.time() - start
+            cost_after = get_cost_controller().total_cost_usd
+            stage_cost = cost_after - cost_before
+            get_cost_controller().record_stage(
+                stage=stage_name,
+                duration_s=round(duration, 2),
+                cost_usd=stage_cost,
+            )
+            logger.info(
+                "stage_completed",
+                stage=stage_name,
+                duration_s=round(duration, 2),
+                cost_exceeded=getattr(self, "_cost_exceeded", False),
+            )
+            return out
+        except Exception as e:
+            duration = time.time() - start
+            self.run.error = str(e)
+            logger.error(
+                "stage_failed",
+                stage=stage_name,
+                duration_s=round(duration, 2),
+                error=str(e),
+            )
+            try:
+                cost_before_retry = get_cost_controller().total_cost_usd
+                out = stage_fn(*args, **kwargs)
+                self.run.error = None
+                duration2 = time.time() - start
+                cost_after_retry = get_cost_controller().total_cost_usd
+                get_cost_controller().record_stage(
+                    stage=stage_name,
+                    duration_s=round(duration2, 2),
+                    cost_usd=cost_after_retry - cost_before_retry,
+                )
+                logger.info(
+                    "stage_completed",
+                    stage=stage_name,
+                    duration_s=round(duration2, 2),
+                    cost_exceeded=getattr(self, "_cost_exceeded", False),
+                )
+                return out
+            except Exception as e2:
+                self.run.error = str(e2)
+                logger.error(
+                    "stage_failed",
+                    stage=stage_name,
+                    duration_s=round(time.time() - start, 2),
+                    error=str(e2),
+                )
+                raise
+
     def execute(self, input_data: GreenfieldInput) -> Dict[str, Any]:
         """Execute the greenfield pipeline.
 
@@ -84,27 +149,45 @@ class GreenfieldSwarm(BaseSwarm):
         """
         try:
             # Stage 1: Discovery
-            pain_matrix = self._run_discovery(input_data)
+            pain_matrix = self._run_stage_with_retry("discovery", self._run_discovery, input_data)
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 2: Architecture
-            architecture = self._run_architecture(pain_matrix, input_data.quality_priorities)
+            architecture = self._run_stage_with_retry(
+                "architecture",
+                self._run_architecture,
+                pain_matrix,
+                input_data.quality_priorities,
+            )
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 3: Estimation
-            estimation = self._run_estimation(architecture, ensemble=getattr(input_data, "ensemble", True))
+            estimation = self._run_stage_with_retry(
+                "estimation",
+                self._run_estimation,
+                architecture,
+                ensemble=getattr(input_data, "ensemble", True),
+            )
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 4: Synthesis
-            summary = self._run_synthesis(pain_matrix, architecture, estimation)
+            summary = self._run_stage_with_retry(
+                "synthesis",
+                self._run_synthesis,
+                pain_matrix,
+                architecture,
+                estimation,
+            )
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 5: Proposal
-            proposal = self._run_proposal(
+            proposal = self._run_stage_with_retry(
+                "proposal",
+                self._run_proposal,
                 summary,
                 input_data.client_name,
                 hourly_rate=getattr(input_data, "hourly_rate", 150.0),
@@ -115,6 +198,149 @@ class GreenfieldSwarm(BaseSwarm):
         except Exception as e:
             self.run.error = str(e)
             return self._finalize_run("error")
+
+    def execute_resume(
+        self,
+        output_dir: Path,
+        client_name: str,
+        hourly_rate: float = 150.0,
+        ensemble: bool = True,
+    ) -> Dict[str, Any]:
+        """Load artifacts from a previous run and continue from the next stage.
+
+        Only runs missing stages; writes back to output_dir.
+        """
+        output_dir = Path(output_dir)
+        if not output_dir.is_dir():
+            raise FileNotFoundError(f"Resume directory not found: {output_dir}")
+
+        # Load run_metadata for token usage
+        meta_path = output_dir / "run_metadata.json"
+        if meta_path.exists():
+            meta = json.loads(meta_path.read_text())
+            tu = meta.get("token_usage", {})
+            self.run.token_usage.input_tokens = tu.get("input_tokens", 0)
+            self.run.token_usage.output_tokens = tu.get("output_tokens", 0)
+
+        # Load artifacts (map filename -> artifact name and type)
+        loaders = [
+            ("discovery.json", "discovery", PainMonetizationMatrix),
+            ("architecture.json", "architecture", ArchitectureResult),
+            ("estimation.json", "estimation", EstimationResult),
+            ("synthesis.json", "synthesis", EngagementSummary),
+            ("proposal.json", "proposal", ProposalDocument),
+        ]
+        for filename, name, model_cls in loaders:
+            path = output_dir / filename
+            if path.exists():
+                data = json.loads(path.read_text())
+                self.run.artifacts[name] = model_cls.model_validate(data)
+
+        # Determine next stage
+        if "proposal" in self.run.artifacts:
+            return self._finalize_run("completed")
+        if "synthesis" in self.run.artifacts:
+            summary = self.run.artifacts["synthesis"]
+            if self._cost_exceeded:
+                return self._finalize_run("cost_exceeded")
+            proposal = self._run_stage_with_retry(
+                "proposal",
+                self._run_proposal,
+                summary,
+                client_name,
+                hourly_rate=hourly_rate,
+            )
+            self.run.artifacts["proposal"] = proposal
+            return self._finalize_run("completed")
+        if "estimation" in self.run.artifacts:
+            if self._cost_exceeded:
+                return self._finalize_run("cost_exceeded")
+            pain_matrix = self.run.artifacts["discovery"]
+            architecture = self.run.artifacts["architecture"]
+            estimation = self.run.artifacts["estimation"]
+            summary = self._run_stage_with_retry(
+                "synthesis",
+                self._run_synthesis,
+                pain_matrix,
+                architecture,
+                estimation,
+            )
+            self.run.artifacts["synthesis"] = summary
+            proposal = self._run_stage_with_retry(
+                "proposal",
+                self._run_proposal,
+                summary,
+                client_name,
+                hourly_rate=hourly_rate,
+            )
+            self.run.artifacts["proposal"] = proposal
+            return self._finalize_run("completed")
+        if "architecture" in self.run.artifacts:
+            pain_matrix = self.run.artifacts["discovery"]
+            architecture = self.run.artifacts["architecture"]
+            estimation = self._run_stage_with_retry(
+                "estimation",
+                self._run_estimation,
+                architecture,
+                ensemble=ensemble,
+            )
+            self.run.artifacts["estimation"] = estimation
+            summary = self._run_stage_with_retry(
+                "synthesis",
+                self._run_synthesis,
+                pain_matrix,
+                architecture,
+                estimation,
+            )
+            self.run.artifacts["synthesis"] = summary
+            proposal = self._run_stage_with_retry(
+                "proposal",
+                self._run_proposal,
+                summary,
+                client_name,
+                hourly_rate=hourly_rate,
+            )
+            self.run.artifacts["proposal"] = proposal
+            return self._finalize_run("completed")
+        if "discovery" in self.run.artifacts:
+            # Run from architecture onward
+            pain_matrix = self.run.artifacts["discovery"]
+            architecture = self._run_stage_with_retry(
+                "architecture",
+                self._run_architecture,
+                pain_matrix,
+                None,
+            )
+            self.run.artifacts["architecture"] = architecture
+            estimation = self._run_stage_with_retry(
+                "estimation",
+                self._run_estimation,
+                architecture,
+                ensemble=ensemble,
+            )
+            self.run.artifacts["estimation"] = estimation
+            summary = self._run_stage_with_retry(
+                "synthesis",
+                self._run_synthesis,
+                pain_matrix,
+                architecture,
+                estimation,
+            )
+            self.run.artifacts["synthesis"] = summary
+            proposal = self._run_stage_with_retry(
+                "proposal",
+                self._run_proposal,
+                summary,
+                client_name,
+                hourly_rate=hourly_rate,
+            )
+            self.run.artifacts["proposal"] = proposal
+            return self._finalize_run("completed")
+
+        raise ValueError(
+            f"No greenfield artifacts found in {output_dir}. "
+            "Need at least discovery.json to resume."
+        )
 
     def _run_discovery(self, input_data: GreenfieldInput) -> PainMonetizationMatrix:
         """Run the discovery stage. If dossier is provided, use it as structured input for Discovery."""

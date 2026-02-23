@@ -74,6 +74,7 @@ class EngagementManager:
         model: Optional[str] = None,
         quality: str = "standard",
         hourly_rate: float = 150.0,
+        run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute a complete Meta-Factory run.
 
@@ -92,7 +93,7 @@ class EngagementManager:
             Dictionary with run results, artifacts, and cost manifest
         """
         self._run_started = datetime.now()
-        self._current_run_id = f"run_{self._run_started.strftime('%Y%m%d_%H%M%S')}"
+        self._current_run_id = run_id or f"run_{self._run_started.strftime('%Y%m%d_%H%M%S')}"
 
         try:
             # Step 1: Route the input
@@ -116,6 +117,55 @@ class EngagementManager:
 
         except Exception as e:
             return self._handle_error(e)
+
+    def run_resume(
+        self,
+        run_id_or_path: str,
+        client_name: str,
+        output_dir: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        quality: str = "standard",
+        hourly_rate: float = 150.0,
+    ) -> Dict[str, Any]:
+        """Resume from a previous run: load artifacts from outputs/RUN_ID and continue from the next stage.
+
+        Only greenfield is supported. Requires --client (used for proposal stage).
+        """
+        out_base = Path(output_dir or settings.output_dir)
+        path = Path(run_id_or_path)
+        if path.is_absolute():
+            output_path = path if path.is_dir() else path.parent
+            run_id = output_path.name
+        elif path.exists():
+            output_path = path if path.is_dir() else path.parent
+            run_id = output_path.name
+        else:
+            output_path = out_base / run_id_or_path
+            run_id = run_id_or_path
+        if not output_path.is_dir():
+            raise FileNotFoundError(f"Resume directory not found: {output_path}")
+
+        self._current_run_id = run_id
+        self._run_started = datetime.now()
+        self.output_dir = output_path.parent  # so _save_run_summary writes to same place
+        print(f"[Meta-Factory] Resuming {run_id} (greenfield)")
+
+        swarm = GreenfieldSwarm(
+            librarian=self.librarian,
+            run_id=run_id,
+            provider=provider or self.provider,
+            model=model or self.model,
+        )
+        swarm._output_dir_override = str(output_path.parent)  # save back to same dir
+        result = swarm.execute_resume(
+            output_dir=output_path,
+            client_name=client_name,
+            hourly_rate=hourly_rate,
+            ensemble=(quality == "premium"),
+        )
+        routing = RoutingDecision(mode=Mode.GREENFIELD, config={})
+        return self._finalize_run(result, routing)
 
     def _dispatch_swarm(
         self,
@@ -269,8 +319,8 @@ class EngagementManager:
 
 
 def run_factory(
-    input_content: str,
-    client_name: str,
+    input_content: str = "",
+    client_name: str = "",
     input_path: Optional[str] = None,
     codebase_content: Optional[str] = None,
     force_mode: Optional[Mode] = None,
@@ -279,6 +329,9 @@ def run_factory(
     model: Optional[str] = None,
     quality: str = "standard",
     hourly_rate: float = 150.0,
+    resume_from: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Convenience function to run the Meta-Factory.
 
@@ -293,6 +346,8 @@ def run_factory(
         model: Model name (e.g. gpt-4o, gemini-1.5-pro)
         quality: standard (RAG, single estimator) or premium (hybrid, ensemble)
         hourly_rate: GBP per hour for cost estimates
+        resume_from: If set, load artifacts from outputs/RUN_ID and continue from next stage
+        output_dir: Output base directory (default from config)
 
     Returns:
         Run results dictionary
@@ -302,6 +357,16 @@ def run_factory(
         provider=provider,
         model=model,
     )
+    if resume_from:
+        return manager.run_resume(
+            run_id_or_path=resume_from,
+            client_name=client_name,
+            output_dir=output_dir,
+            provider=provider,
+            model=model,
+            quality=quality,
+            hourly_rate=hourly_rate,
+        )
     return manager.run(
         input_content=input_content,
         client_name=client_name,
@@ -312,4 +377,5 @@ def run_factory(
         model=model,
         quality=quality,
         hourly_rate=hourly_rate,
+        run_id=run_id,
     )
