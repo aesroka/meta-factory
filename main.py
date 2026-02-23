@@ -152,6 +152,29 @@ def read_input_content(input_path: str) -> str:
     metavar="RUN_ID",
     help="Resume from a previous run (e.g. run_20260213_145954). Loads artifacts from outputs/RUN_ID and continues."
 )
+@click.option(
+    "--baseline",
+    default=None,
+    metavar="RUN_ID",
+    help="Baseline run to compare against (e.g. run_20260213_145954). Generates diff after run."
+)
+@click.option(
+    "--compare-only",
+    is_flag=True,
+    help="Only generate diff between --baseline and --new; do not run pipeline."
+)
+@click.option(
+    "--new",
+    "new_run_id",
+    default=None,
+    metavar="RUN_ID",
+    help="With --compare-only: the other run to compare (default: latest run in output dir)."
+)
+@click.option(
+    "--variation",
+    default=None,
+    help="Variation name for this run (e.g. minimal, standard, premium). Saved in run metadata."
+)
 def main(
     input_path: Optional[str],
     client_name: Optional[str],
@@ -167,12 +190,44 @@ def main(
     verbose: bool,
     quality: str,
     hourly_rate: float,
+    baseline: Optional[str],
+    compare_only: bool,
+    new_run_id: Optional[str],
+    variation: Optional[str],
 ):
     """Meta-Factory: Autonomous AI Proposal System.
 
     Ingests diverse inputs (transcripts, ideas, codebases) and orchestrates
     specialized agent swarms to produce production-ready software proposals.
     """
+    # Handle --compare-only (diff two existing runs without running pipeline)
+    if compare_only and baseline:
+        out_base = Path(output_dir or settings.output_dir)
+        baseline_path = out_base / baseline
+        if not baseline_path.is_dir():
+            console.print(f"[red]Baseline run not found: {baseline}[/red]")
+            sys.exit(1)
+        if new_run_id:
+            new_path = out_base / new_run_id
+        else:
+            # Use latest run in output dir (by mtime)
+            runs = sorted([d for d in out_base.iterdir() if d.is_dir() and (d / "proposal.json").exists()], key=lambda d: (d / "proposal.json").stat().st_mtime, reverse=True)
+            if not runs:
+                console.print("[red]No runs with proposal.json found. Run a pipeline first or pass --new RUN_ID.[/red]")
+                sys.exit(1)
+            new_path = runs[0]
+        if not (new_path / "proposal.json").exists():
+            console.print(f"[red]New run has no proposal: {new_path}[/red]")
+            sys.exit(1)
+        from utils.proposal_diff import generate_proposal_diff
+        diff = generate_proposal_diff(baseline_path, new_path)
+        diff_md = diff.to_markdown()
+        diff_file = new_path / f"diff_vs_{baseline}.md"
+        diff_file.write_text(diff_md)
+        console.print(diff_md)
+        console.print(f"\n[dim]Diff saved to {diff_file}[/dim]")
+        return
+
     # Handle --list-providers
     if list_providers:
         console.print("[bold]Available LLM Providers:[/bold]\n")
@@ -306,6 +361,8 @@ def main(
                 quality=quality,
                 hourly_rate=hourly_rate,
                 run_id=run_id,
+                baseline=baseline,
+                variation=variation,
             )
 
         progress.update(task, completed=True)
@@ -357,6 +414,21 @@ def main(
     output_path = result.get("output_path")
     if output_path:
         console.print(f"\n[bold]Output saved to:[/bold] {output_path}")
+
+    # Generate diff vs baseline if requested
+    if baseline and result.get("status") != "error":
+        out_base = Path(output_dir or settings.output_dir)
+        baseline_path = out_base / baseline
+        new_path = Path(output_path) if output_path else out_base / result.get("run_id", "")
+        if baseline_path.is_dir() and new_path.is_dir() and (new_path / "proposal.json").exists() and (baseline_path / "proposal.json").exists():
+            from utils.proposal_diff import generate_proposal_diff
+            diff = generate_proposal_diff(baseline_path, new_path)
+            diff_md = diff.to_markdown()
+            diff_file = new_path / f"diff_vs_{baseline}.md"
+            diff_file.write_text(diff_md)
+            console.print("\n[bold]Diff vs baseline:[/bold]")
+            console.print(diff_md)
+            console.print(f"\n[dim]Diff saved to {diff_file}[/dim]")
 
     console.print("\n" + "=" * 60)
 

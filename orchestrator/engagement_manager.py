@@ -75,6 +75,8 @@ class EngagementManager:
         quality: str = "standard",
         hourly_rate: float = 150.0,
         run_id: Optional[str] = None,
+        baseline: Optional[str] = None,
+        variation: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute a complete Meta-Factory run.
 
@@ -94,6 +96,8 @@ class EngagementManager:
         """
         self._run_started = datetime.now()
         self._current_run_id = run_id or f"run_{self._run_started.strftime('%Y%m%d_%H%M%S')}"
+        self._baseline = baseline
+        self._variation = variation
 
         try:
             # Step 1: Route the input
@@ -200,6 +204,8 @@ class EngagementManager:
                 provider=provider,
                 model=model,
             )
+            swarm.variation = getattr(self, "_variation", None)
+            swarm.baseline = getattr(self, "_baseline", None)
             swarm_input = GreenfieldInput(
                 transcript=input_content,
                 client_name=client_name,
@@ -215,6 +221,8 @@ class EngagementManager:
                 provider=provider,
                 model=model,
             )
+            swarm.variation = getattr(self, "_variation", None)
+            swarm.baseline = getattr(self, "_baseline", None)
             swarm_input = BrownfieldInput(
                 codebase_description=input_content,
                 client_name=client_name,
@@ -232,6 +240,8 @@ class EngagementManager:
                 provider=provider,
                 model=model,
             )
+            swarm.variation = getattr(self, "_variation", None)
+            swarm.baseline = getattr(self, "_baseline", None)
             swarm_input = GreyfieldInput(
                 transcript=input_content,
                 codebase_description=codebase_content,
@@ -332,6 +342,8 @@ def run_factory(
     resume_from: Optional[str] = None,
     output_dir: Optional[str] = None,
     run_id: Optional[str] = None,
+    baseline: Optional[str] = None,
+    variation: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Convenience function to run the Meta-Factory.
 
@@ -378,4 +390,6 @@ def run_factory(
         quality=quality,
         hourly_rate=hourly_rate,
         run_id=run_id,
+        baseline=baseline,
+        variation=variation,
     )

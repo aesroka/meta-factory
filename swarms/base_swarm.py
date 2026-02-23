@@ -282,6 +282,10 @@ class BaseSwarm(ABC):
             },
             "escalations": len(self.run.escalations),
         }
+        if getattr(self, "variation", None) is not None:
+            run_meta["variation"] = self.variation
+        if getattr(self, "baseline", None) is not None:
+            run_meta["baseline"] = self.baseline
         (output_path / "run_metadata.json").write_text(json.dumps(run_meta, indent=2))
 
         # Save escalations if any
