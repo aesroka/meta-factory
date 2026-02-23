@@ -12,6 +12,7 @@ Usage:
     python main.py --input ./transcript.txt --codebase ./legacy_code/ --client "Acme Corp" --mode greyfield
 """
 
+import os
 import sys
 import json
 from pathlib import Path
@@ -175,6 +176,11 @@ def read_input_content(input_path: str) -> str:
     default=None,
     help="Variation name for this run (e.g. minimal, standard, premium). Saved in run metadata."
 )
+@click.option(
+    "--prompt-variant",
+    default="default",
+    help="Prompt variant for agents that load from YAML (default, concise, experimental)."
+)
 def main(
     input_path: Optional[str],
     client_name: Optional[str],
@@ -194,6 +200,7 @@ def main(
     compare_only: bool,
     new_run_id: Optional[str],
     variation: Optional[str],
+    prompt_variant: str,
 ):
     """Meta-Factory: Autonomous AI Proposal System.
 
@@ -251,6 +258,9 @@ def main(
         if not client_name:
             console.print("[red]Error: --client is required[/red]")
             sys.exit(1)
+
+    # Prompt variant: set so agents that load from YAML use it
+    os.environ["META_FACTORY_PROMPT_VARIANT"] = prompt_variant
 
     # Generate run_id and set up logging (so logs go to outputs/run_id/run.log)
     run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if not resume else None

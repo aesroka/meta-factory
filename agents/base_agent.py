@@ -8,6 +8,7 @@ Every agent:
 """
 
 import json
+import os
 from abc import ABC, abstractmethod
 from typing import Type, TypeVar, Optional, Any, Dict
 from pydantic import BaseModel, ValidationError
@@ -56,18 +57,19 @@ class BaseAgent(ABC):
     def __init__(
         self,
         role: str,
-        system_prompt: str,
-        output_schema: Type[T],
+        system_prompt: Optional[str] = None,
+        output_schema: Type[T] = None,  # type: ignore
         librarian: Optional[Librarian] = None,
         model: Optional[str] = None,
         provider: Optional[str] = None,
         depth: Optional[str] = None,
+        prompt_variant: str = "default",
     ):
         """Initialize the agent.
 
         Args:
             role: Agent role for Bible loading (e.g., 'discovery', 'architect')
-            system_prompt: The agent's system prompt defining its behavior
+            system_prompt: The agent's system prompt; if None, loaded from agents/prompts/{role}.yaml
             output_schema: Pydantic model class for validating output
             librarian: Librarian instance for loading Bible context
             model: Override the default model (e.g., 'gpt-4o', 'gemini-pro', 'deepseek-chat')
@@ -75,8 +77,16 @@ class BaseAgent(ABC):
                      If not specified, auto-detected from model name or defaults to anthropic
             depth: Bible context depth — "cheat_sheet" (default for tier1/tier2) or "full" (tier0/tier3).
                    If None, derived from DEFAULT_TIER.
+            prompt_variant: Variant name when loading prompt from YAML (default, concise, etc.)
         """
         self.role = role
+        if system_prompt is None:
+            variant = os.environ.get("META_FACTORY_PROMPT_VARIANT", prompt_variant)
+            try:
+                from agents.prompt_loader import get_prompt_loader
+                system_prompt = get_prompt_loader().load(role, variant)
+            except FileNotFoundError:
+                raise ValueError(f"No prompt file for role {role}. Add agents/prompts/{role}.yaml or pass system_prompt.")
         self.system_prompt = system_prompt
         self.output_schema = output_schema
         self.model = model
