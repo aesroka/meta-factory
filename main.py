@@ -186,6 +186,11 @@ def read_input_content(input_path: str) -> str:
     is_flag=True,
     help="Apply reference class forecasting corrections from historical data."
 )
+@click.option(
+    "--estimate-only",
+    is_flag=True,
+    help="Show cost/time estimate without running the pipeline."
+)
 def main(
     input_path: Optional[str],
     client_name: Optional[str],
@@ -207,6 +212,7 @@ def main(
     variation: Optional[str],
     prompt_variant: str,
     use_reference_forecast: bool,
+    estimate_only: bool,
 ):
     """Meta-Factory: Autonomous AI Proposal System.
 
@@ -307,6 +313,22 @@ def main(
 
         console.print(f"[dim]Input size:[/dim] {len(input_content):,} characters")
 
+        # --estimate-only: show prediction and optionally exit
+        if estimate_only:
+            from utils.cost_predictor import estimate_cost_and_time
+            eff_mode = (mode if mode != "auto" else "greenfield")
+            est = estimate_cost_and_time(len(input_content), eff_mode, quality)
+            console.print("\n[bold]Estimated Cost & Duration[/bold]")
+            console.print(f"  Quality: {quality}")
+            console.print(f"  Mode: {eff_mode}")
+            console.print(f"  Input size: {len(input_content):,} characters")
+            console.print()
+            console.print(f"  Cost: ${est['min_cost_usd']:.2f} - ${est['max_cost_usd']:.2f}")
+            console.print(f"  Duration: {est['min_duration_min']:.0f}-{est['max_duration_min']:.0f} minutes")
+            proceed = click.confirm("\nProceed with run?", default=True)
+            if not proceed:
+                return
+
         # Classify input if in auto mode
         if mode == "auto" or classify_only:
             console.print("\n[bold]Classifying input...[/bold]")
@@ -340,6 +362,52 @@ def main(
             sys.exit(1)
 
     # Run the factory (or resume)
+    try:
+        _run_main(
+            console=console,
+            resume=resume,
+            run_id=run_id,
+            output_dir=output_dir,
+            client_name=client_name,
+            input_content=input_content,
+            input_path=input_path,
+            codebase_content=codebase_content,
+            force_mode=force_mode,
+            max_cost=max_cost,
+            provider=provider,
+            model=model,
+            quality=quality,
+            hourly_rate=hourly_rate,
+            baseline=baseline,
+            variation=variation,
+            use_reference_forecast=use_reference_forecast,
+        )
+    except Exception as e:
+        from utils.error_handler import handle_error
+        handle_error(e)
+        sys.exit(1)
+
+
+def _run_main(
+    console,
+    resume,
+    run_id,
+    output_dir,
+    client_name,
+    input_content,
+    input_path,
+    codebase_content,
+    force_mode,
+    max_cost,
+    provider,
+    model,
+    quality,
+    hourly_rate,
+    baseline,
+    variation,
+    use_reference_forecast,
+) -> None:
+    """Inner main: run pipeline and display results."""
     console.print(f"\n[bold]Running Meta-Factory...[/bold]")
     console.print(f"  [dim]Client:[/dim] {client_name}")
     console.print(f"  [dim]Max cost:[/dim] ${max_cost or settings.max_cost_per_run_usd}")
