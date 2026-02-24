@@ -1,5 +1,6 @@
 """Structured logging setup for Meta-Factory."""
 
+import atexit
 import json
 import logging
 from pathlib import Path
@@ -18,6 +19,7 @@ def setup_logging(run_id: str, output_dir: Path, verbose: bool = False) -> struc
     log_path = output_dir / "run.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     _file_stream = open(log_path, "a", encoding="utf-8")
+    atexit.register(_file_stream.close)  # Ensure cleanup on exit
 
     def _write_to_file(
         logger: Any, method_name: str, event_dict: dict
