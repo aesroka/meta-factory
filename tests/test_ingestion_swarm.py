@@ -65,7 +65,8 @@ class TestIngestionSwarm:
         rag_search_mod = importlib.import_module("agents.tools.rag_search")
         with patch.object(rag_search_mod, "rag_search", side_effect=fake_rag_search):
             with patch("litellm.completion", side_effect=fake_completion):
-                with patch("providers.cost_logger.get_swarm_cost_logger"):
+                with patch("providers.cost_logger.get_swarm_cost_logger") as mock_logger:
+                    mock_logger.return_value = MagicMock(total_cost=0.0, calls=[])
                     swarm = IngestionSwarm(run_id="test_ingestion", provider="openai", model="gpt-4o-mini")
                     result = swarm.execute(IngestionInput(client_name="TestClient", dataset_id="ds1"))
         assert result.get("status") == "completed"
