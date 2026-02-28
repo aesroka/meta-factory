@@ -1,8 +1,8 @@
 {
   "run_id": "test_empty",
   "mode": "ingestion",
-  "started_at": "2026-02-23T21:50:29.558692",
-  "completed_at": "2026-02-23T21:50:29.558733",
+  "started_at": "2026-02-28T14:04:06.567408",
+  "completed_at": "2026-02-28T14:04:06.567515",
   "status": "error",
   "token_usage": {
     "input_tokens": 0,

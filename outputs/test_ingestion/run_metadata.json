@@ -1,13 +1,13 @@
 {
   "run_id": "test_ingestion",
   "mode": "ingestion",
-  "started_at": "2026-02-23T21:50:29.552185",
-  "completed_at": "2026-02-23T21:50:29.556872",
+  "started_at": "2026-02-28T14:04:06.553761",
+  "completed_at": "2026-02-28T14:04:06.559233",
   "status": "completed",
   "token_usage": {
     "input_tokens": 90,
     "output_tokens": 40,
-    "total_cost_usd": 0.0008700000000000001
+    "total_cost_usd": 0.0
   },
   "escalations": 0
 }
