@@ -11,6 +11,7 @@ from typing import Optional, Any, Dict, TYPE_CHECKING
 from datetime import datetime
 
 from swarms.base_swarm import BaseSwarm
+from orchestrator.cost_controller import get_cost_controller
 from agents import (
     DiscoveryAgent,
     DiscoveryInput,
@@ -79,7 +80,6 @@ class GreenfieldSwarm(BaseSwarm):
         """Run a stage once; on failure retry once, then raise."""
         import time
         import structlog
-        from orchestrator.cost_controller import get_cost_controller
         logger = structlog.get_logger()
         logger.info("stage_started", stage=stage_name, mode=self.mode_name)
         start = time.time()
@@ -508,7 +508,7 @@ class GreenfieldSwarm(BaseSwarm):
             "token_usage": {
                 "input_tokens": self.run.token_usage.input_tokens,
                 "output_tokens": self.run.token_usage.output_tokens,
-                "cost_usd": self.run.token_usage.total_cost,
+                "cost_usd": get_cost_controller().total_cost_usd,
             },
         }
         if self.run.error is not None:

@@ -28,7 +28,7 @@ class TokenUsage(BaseModel):
 
     @property
     def total_cost(self) -> float:
-        """Calculate cost based on current token pricing."""
+        """Legacy; budget and reporting use SwarmCostLogger via CostController."""
         return settings.calculate_cost(self.input_tokens, self.output_tokens)
 
 

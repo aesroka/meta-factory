@@ -16,6 +16,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from swarms.base_swarm import BaseSwarm
+from orchestrator.cost_controller import get_cost_controller
 from agents import (
     DiscoveryAgent,
     DiscoveryInput,
@@ -420,6 +421,6 @@ class GreyfieldSwarm(BaseSwarm):
             "token_usage": {
                 "input_tokens": self.run.token_usage.input_tokens,
                 "output_tokens": self.run.token_usage.output_tokens,
-                "cost_usd": self.run.token_usage.total_cost,
+                "cost_usd": get_cost_controller().total_cost_usd,
             },
         }

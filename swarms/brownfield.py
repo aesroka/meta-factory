@@ -9,6 +9,7 @@ from typing import Optional, Any, Dict
 from datetime import datetime
 
 from swarms.base_swarm import BaseSwarm
+from orchestrator.cost_controller import get_cost_controller
 from agents import (
     LegacyAgent,
     LegacyInput,
@@ -322,6 +323,6 @@ class BrownfieldSwarm(BaseSwarm):
             "token_usage": {
                 "input_tokens": self.run.token_usage.input_tokens,
                 "output_tokens": self.run.token_usage.output_tokens,
-                "cost_usd": self.run.token_usage.total_cost,
+                "cost_usd": get_cost_controller().total_cost_usd,
             },
         }

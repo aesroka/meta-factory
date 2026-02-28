@@ -14,6 +14,7 @@ from agents import BaseAgent, CriticAgent, TokenUsage
 from librarian import Librarian
 from contracts import CriticVerdict, Objection, HumanEscalation
 from config import settings
+from orchestrator.cost_controller import get_cost_controller
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -83,7 +84,7 @@ class BaseSwarm(ABC):
         Returns:
             True if under limit, False if exceeded
         """
-        current_cost = self.run.token_usage.total_cost
+        current_cost = get_cost_controller().total_cost_usd
         if current_cost >= settings.max_cost_per_run_usd:
             self._cost_exceeded = True
             return False
@@ -268,7 +269,7 @@ class BaseSwarm(ABC):
                 md_path = output_path / "proposal.md"
                 md_path.write_text(artifact.to_markdown())
 
-        # Save run metadata
+        # Save run metadata (cost from SwarmCostLogger via CostController)
         run_meta = {
             "run_id": self.run.run_id,
             "mode": self.run.mode,
@@ -278,7 +279,7 @@ class BaseSwarm(ABC):
             "token_usage": {
                 "input_tokens": self.run.token_usage.input_tokens,
                 "output_tokens": self.run.token_usage.output_tokens,
-                "total_cost_usd": self.run.token_usage.total_cost,
+                "total_cost_usd": get_cost_controller().total_cost_usd,
             },
             "escalations": len(self.run.escalations),
         }

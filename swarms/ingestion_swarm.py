@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from swarms.base_swarm import BaseSwarm
+from orchestrator.cost_controller import get_cost_controller
 from librarian import Librarian
 from agents import MinerAgent, MINER_RAG_QUERIES
 from contracts import MinerInput, ProjectDossier, DossierReconciliation
@@ -224,7 +225,7 @@ class IngestionSwarm(BaseSwarm):
             "token_usage": {
                 "input_tokens": self.run.token_usage.input_tokens,
                 "output_tokens": self.run.token_usage.output_tokens,
-                "cost_usd": self.run.token_usage.total_cost,
+                "cost_usd": get_cost_controller().total_cost_usd,
             },
         }
         if self.run.error is not None:
