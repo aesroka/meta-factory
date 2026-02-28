@@ -78,6 +78,7 @@ class EngagementManager:
         baseline: Optional[str] = None,
         variation: Optional[str] = None,
         use_reference_forecast: bool = False,
+        progress_callback: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """Execute a complete Meta-Factory run.
 
@@ -100,6 +101,7 @@ class EngagementManager:
         self._baseline = baseline
         self._variation = variation
         self._use_reference_forecast = use_reference_forecast
+        self._progress_callback = progress_callback
 
         try:
             # Step 1: Route the input
@@ -116,6 +118,7 @@ class EngagementManager:
                 model or self.model,
                 quality=quality,
                 hourly_rate=hourly_rate,
+                progress_callback=progress_callback,
             )
 
             # Step 3: Finalize and return results
@@ -133,11 +136,13 @@ class EngagementManager:
         model: Optional[str] = None,
         quality: str = "standard",
         hourly_rate: float = 150.0,
+        progress_callback: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """Resume from a previous run: load artifacts from outputs/RUN_ID and continue from the next stage.
 
         Only greenfield is supported. Requires --client (used for proposal stage).
         """
+        self._progress_callback = progress_callback
         out_base = Path(output_dir or settings.output_dir)
         path = Path(run_id_or_path)
         if path.is_absolute():
@@ -162,6 +167,7 @@ class EngagementManager:
             run_id=run_id,
             provider=provider or self.provider,
             model=model or self.model,
+            progress_callback=getattr(self, "_progress_callback", None),
         )
         swarm._output_dir_override = str(output_path.parent)  # save back to same dir
         result = swarm.execute_resume(
@@ -183,6 +189,7 @@ class EngagementManager:
         model: Optional[str] = None,
         quality: str = "standard",
         hourly_rate: float = 150.0,
+        progress_callback: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """Dispatch execution to the appropriate swarm.
 
@@ -205,6 +212,7 @@ class EngagementManager:
                 run_id=self._current_run_id,
                 provider=provider,
                 model=model,
+                progress_callback=progress_callback,
             )
             swarm.variation = getattr(self, "_variation", None)
             swarm.baseline = getattr(self, "_baseline", None)
@@ -223,6 +231,7 @@ class EngagementManager:
                 run_id=self._current_run_id,
                 provider=provider,
                 model=model,
+                progress_callback=progress_callback,
             )
             swarm.variation = getattr(self, "_variation", None)
             swarm.baseline = getattr(self, "_baseline", None)
@@ -242,6 +251,7 @@ class EngagementManager:
                 run_id=self._current_run_id,
                 provider=provider,
                 model=model,
+                progress_callback=progress_callback,
             )
             swarm.variation = getattr(self, "_variation", None)
             swarm.baseline = getattr(self, "_baseline", None)
@@ -348,6 +358,7 @@ def run_factory(
     baseline: Optional[str] = None,
     variation: Optional[str] = None,
     use_reference_forecast: bool = False,
+    progress_callback: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Convenience function to run the Meta-Factory.
 
@@ -382,6 +393,7 @@ def run_factory(
             model=model,
             quality=quality,
             hourly_rate=hourly_rate,
+            progress_callback=progress_callback,
         )
     return manager.run(
         input_content=input_content,
@@ -397,4 +409,5 @@ def run_factory(
         baseline=baseline,
         variation=variation,
         use_reference_forecast=use_reference_forecast,
+        progress_callback=progress_callback,
     )

@@ -80,6 +80,7 @@ class GreenfieldSwarm(BaseSwarm):
         import time
         import structlog
         logger = structlog.get_logger()
+        self._emit_progress(stage_name, "started")
         logger.info("stage_started", stage=stage_name, mode=self.mode_name)
         start = time.time()
         from orchestrator.cost_controller import get_cost_controller
@@ -94,6 +95,7 @@ class GreenfieldSwarm(BaseSwarm):
                 duration_s=round(duration, 2),
                 cost_usd=stage_cost,
             )
+            self._emit_progress(stage_name, "completed", duration_s=round(duration, 2), cost_usd=stage_cost)
             logger.info(
                 "stage_completed",
                 stage=stage_name,
@@ -104,6 +106,7 @@ class GreenfieldSwarm(BaseSwarm):
         except Exception as e:
             duration = time.time() - start
             self.run.error = str(e)
+            self._emit_progress(stage_name, "failed", duration_s=round(duration, 2), error=str(e))
             logger.error(
                 "stage_failed",
                 stage=stage_name,
@@ -121,6 +124,7 @@ class GreenfieldSwarm(BaseSwarm):
                     duration_s=round(duration2, 2),
                     cost_usd=cost_after_retry - cost_before_retry,
                 )
+                self._emit_progress(stage_name, "completed", duration_s=round(duration2, 2), cost_usd=cost_after_retry - cost_before_retry)
                 logger.info(
                     "stage_completed",
                     stage=stage_name,
@@ -130,6 +134,7 @@ class GreenfieldSwarm(BaseSwarm):
                 return out
             except Exception as e2:
                 self.run.error = str(e2)
+                self._emit_progress(stage_name, "failed", duration_s=round(time.time() - start, 2), error=str(e2))
                 logger.error(
                     "stage_failed",
                     stage=stage_name,

@@ -421,6 +421,12 @@ def _run_main(
     ) as progress:
         task = progress.add_task("Processing...", total=None)
 
+        def on_progress(stage: str, status: str, **kwargs: object) -> None:
+            desc = f"{stage}: {status}"
+            if kwargs.get("duration_s") is not None:
+                desc += f" ({kwargs['duration_s']}s)"
+            progress.update(task, description=desc)
+
         if resume:
             result = run_factory(
                 resume_from=resume,
@@ -431,6 +437,7 @@ def _run_main(
                 model=model,
                 quality=quality,
                 hourly_rate=hourly_rate,
+                progress_callback=on_progress,
             )
         else:
             result = run_factory(
@@ -448,6 +455,7 @@ def _run_main(
                 baseline=baseline,
                 variation=variation,
                 use_reference_forecast=use_reference_forecast,
+                progress_callback=on_progress,
             )
 
         progress.update(task, completed=True)

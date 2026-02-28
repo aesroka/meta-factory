@@ -86,27 +86,32 @@ class BrownfieldSwarm(BaseSwarm):
         """
         try:
             # Stage 1: Legacy Analysis
+            self._emit_progress("legacy_analysis", "started")
             legacy_result = self._run_legacy_analysis(input_data)
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 2: Refactoring Plan (using Architect with legacy context)
             pain_matrix = self._create_pain_matrix_from_legacy(legacy_result, input_data)
+            self._emit_progress("refactoring_plan", "started")
             architecture = self._run_refactoring_plan(legacy_result, pain_matrix)
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 3: Estimation (with legacy risk factors)
+            self._emit_progress("estimation", "started")
             estimation = self._run_estimation(architecture, legacy_result)
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 4: Synthesis
+            self._emit_progress("synthesis", "started")
             summary = self._run_synthesis(pain_matrix, architecture, estimation, legacy_result)
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 5: Proposal
+            self._emit_progress("proposal", "started")
             proposal = self._run_proposal(
                 summary,
                 input_data.client_name,

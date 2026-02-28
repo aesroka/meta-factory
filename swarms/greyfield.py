@@ -104,6 +104,7 @@ class GreyfieldSwarm(BaseSwarm):
         """
         try:
             # Stage 1: Parallel Discovery + Legacy Analysis
+            self._emit_progress("discovery_legacy", "started")
             pain_matrix, legacy_result = self._run_parallel_analysis(input_data)
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
@@ -113,6 +114,7 @@ class GreyfieldSwarm(BaseSwarm):
             self.run.artifacts["reconciled_constraints"] = reconciled_constraints
 
             # Stage 3: Architecture (with both inputs)
+            self._emit_progress("architecture", "started")
             architecture = self._run_architecture(
                 pain_matrix,
                 legacy_result,
@@ -123,16 +125,19 @@ class GreyfieldSwarm(BaseSwarm):
                 return self._finalize_run("cost_exceeded")
 
             # Stage 4: Estimation
+            self._emit_progress("estimation", "started")
             estimation = self._run_estimation(architecture, legacy_result)
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 5: Synthesis
+            self._emit_progress("synthesis", "started")
             summary = self._run_synthesis(pain_matrix, architecture, estimation, legacy_result)
             if self._cost_exceeded:
                 return self._finalize_run("cost_exceeded")
 
             # Stage 6: Proposal
+            self._emit_progress("proposal", "started")
             proposal = self._run_proposal(
                 summary,
                 input_data.client_name,

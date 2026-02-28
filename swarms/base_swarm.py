@@ -10,6 +10,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pydantic import BaseModel
 
+# Type for progress callback: (stage, status, **kwargs) -> None
+ProgressCallback = Optional[Callable[..., None]]
+
 from agents import BaseAgent, CriticAgent, TokenUsage
 from librarian import Librarian
 from contracts import CriticVerdict, Objection, HumanEscalation
@@ -42,6 +45,7 @@ class BaseSwarm(ABC):
     - Cost tracking and circuit breakers
     - Artifact storage and retrieval
     - Error handling and escalation
+    - Optional progress_callback for stage updates (stage, status, **kwargs)
     """
 
     def __init__(
@@ -50,6 +54,7 @@ class BaseSwarm(ABC):
         run_id: Optional[str] = None,
         provider: Optional[str] = None,
         model: Optional[str] = None,
+        progress_callback: ProgressCallback = None,
     ):
         """Initialize the swarm.
 
@@ -58,6 +63,7 @@ class BaseSwarm(ABC):
             run_id: Unique identifier for this run
             provider: LLM provider for agents (anthropic, openai, gemini, deepseek)
             model: Model name for agents
+            progress_callback: Optional callback(stage, status, **kwargs) for stage updates
         """
         self.librarian = librarian or Librarian()
         self.run_id = run_id or self._generate_run_id()
@@ -65,6 +71,7 @@ class BaseSwarm(ABC):
         self._cost_exceeded = False
         self.provider = provider
         self.model = model
+        self.progress_callback = progress_callback
 
     @property
     @abstractmethod
@@ -76,6 +83,15 @@ class BaseSwarm(ABC):
         """Generate a unique run ID."""
         from datetime import datetime
         return f"{self.mode_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    def _emit_progress(self, stage: str, status: str, **kwargs: Any) -> None:
+        """Emit progress update if callback is registered. Swallows callback errors."""
+        if self.progress_callback is None:
+            return
+        try:
+            self.progress_callback(stage=stage, status=status, **kwargs)
+        except Exception:
+            pass
 
     def _check_cost_limit(self) -> bool:
         """Check if cost limit has been exceeded.
