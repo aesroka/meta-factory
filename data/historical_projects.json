@@ -1,0 +1,113 @@
+{
+  "projects": [
+    {
+      "run_id": "run_seed_logistics_20250115",
+      "client_name": "Acme Logistics",
+      "project_name": "Driver manifest app",
+      "mode": "greenfield",
+      "quality": "standard",
+      "domain": "logistics",
+      "project_type": "mobile-app",
+      "team_size": 3,
+      "phases": [
+        {
+          "phase_name": "POC",
+          "phase_type": "poc",
+          "estimated_hours": 80.0,
+          "actual_hours": 92.0,
+          "accuracy_ratio": 1.15,
+          "estimated_cost_gbp": 12000.0,
+          "actual_cost_gbp": 13800.0,
+          "estimated_weeks": 2,
+          "actual_weeks": 2,
+          "completed_date": null,
+          "notes": ""
+        },
+        {
+          "phase_name": "MVP",
+          "phase_type": "mvp",
+          "estimated_hours": 200.0,
+          "actual_hours": 210.0,
+          "accuracy_ratio": 1.05,
+          "estimated_cost_gbp": null,
+          "actual_cost_gbp": null,
+          "estimated_weeks": 5,
+          "actual_weeks": 5,
+          "completed_date": null,
+          "notes": ""
+        }
+      ],
+      "total_estimated_hours": 280.0,
+      "total_actual_hours": 302.0,
+      "overall_accuracy_ratio": 1.0785714285714285,
+      "proposal_generated_date": null,
+      "project_completed_date": "2025-02-01 00:00:00",
+      "lessons_learned": "POC took longer due to offline sync scope.",
+      "tags": []
+    },
+    {
+      "run_id": "run_seed_fintech_20250201",
+      "client_name": "Beta Finance",
+      "project_name": "API integration hub",
+      "mode": "greenfield",
+      "quality": "premium",
+      "domain": "fintech",
+      "project_type": "api-integration",
+      "team_size": 4,
+      "phases": [
+        {
+          "phase_name": "POC",
+          "phase_type": "poc",
+          "estimated_hours": 120.0,
+          "actual_hours": 115.0,
+          "accuracy_ratio": 0.9583333333333334,
+          "estimated_cost_gbp": null,
+          "actual_cost_gbp": null,
+          "estimated_weeks": 3,
+          "actual_weeks": 3,
+          "completed_date": null,
+          "notes": ""
+        }
+      ],
+      "total_estimated_hours": 120.0,
+      "total_actual_hours": 115.0,
+      "overall_accuracy_ratio": 0.9583333333333334,
+      "proposal_generated_date": null,
+      "project_completed_date": "2025-03-01 00:00:00",
+      "lessons_learned": "Estimate was slightly high; team was experienced.",
+      "tags": []
+    },
+    {
+      "run_id": "run_seed_legacy_20250120",
+      "client_name": "Delta Corp",
+      "project_name": "Legacy monolith refactor",
+      "mode": "brownfield",
+      "quality": "standard",
+      "domain": "logistics",
+      "project_type": "api-integration",
+      "team_size": 2,
+      "phases": [
+        {
+          "phase_name": "POC",
+          "phase_type": "poc",
+          "estimated_hours": 60.0,
+          "actual_hours": 78.0,
+          "accuracy_ratio": 1.3,
+          "estimated_cost_gbp": null,
+          "actual_cost_gbp": null,
+          "estimated_weeks": 2,
+          "actual_weeks": 2,
+          "completed_date": null,
+          "notes": ""
+        }
+      ],
+      "total_estimated_hours": 60.0,
+      "total_actual_hours": 78.0,
+      "overall_accuracy_ratio": 1.3,
+      "proposal_generated_date": null,
+      "project_completed_date": "2025-02-15 00:00:00",
+      "lessons_learned": "Legacy coupling was worse than expected.",
+      "tags": []
+    }
+  ]
+}

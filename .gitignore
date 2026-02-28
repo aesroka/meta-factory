@@ -36,5 +36,8 @@ Thumbs.db
 # Run outputs (each run writes to outputs/<run_id>/)
 # Kept off git; see outputs/sample/ for an example of what a run produces.
 outputs/*
+
+# Per-outcome exports from record_outcome (historical_projects.json is the source of truth)
+data/outcomes/
 !outputs/sample/
 !outputs/sample/**

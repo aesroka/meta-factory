@@ -187,6 +187,20 @@ meta-factory/
 └── FORGE-STREAM-PLAN.md  # Roadmap and phase details
 ```
 
+## v1.0 completion
+
+The checklist used to reach a team-usable v1.0 is described in **[completion_plan.md](completion_plan.md)** in the repo root. It defines 12 tasks in three priority tiers:
+
+| Priority | Focus | Tasks |
+|----------|--------|--------|
+| **P1** | Verification & critical fixes | 1–4 (smoke test, log handle, single cost source, smoke script) |
+| **P2** | Integration tests, progress UX | 5–8 (greenfield/brownfield/greyfield e2e tests, BaseSwarm progress callback) |
+| **P3** | Data, cleanup, docs | 9–12 (historical seed data, branch cleanup, hybrid/ref-forecast docs, this section) |
+
+**P1 (verification + cost fix) must pass before client use.** See `completion_plan.md` for full steps and acceptance criteria.
+
+For historical data, reference forecasting, and hybrid context usage, see **[docs/USAGE.md](docs/USAGE.md)**.
+
 ## Build Phases
 
 - [x] **Phase 1**: Contracts & Skeleton
