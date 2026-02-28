@@ -11,7 +11,6 @@ from typing import Optional, Any, Dict, TYPE_CHECKING
 from datetime import datetime
 
 from swarms.base_swarm import BaseSwarm
-from orchestrator.cost_controller import get_cost_controller
 from agents import (
     DiscoveryAgent,
     DiscoveryInput,
@@ -83,6 +82,7 @@ class GreenfieldSwarm(BaseSwarm):
         logger = structlog.get_logger()
         logger.info("stage_started", stage=stage_name, mode=self.mode_name)
         start = time.time()
+        from orchestrator.cost_controller import get_cost_controller
         cost_before = get_cost_controller().total_cost_usd
         try:
             out = stage_fn(*args, **kwargs)
@@ -493,6 +493,7 @@ class GreenfieldSwarm(BaseSwarm):
 
     def _finalize_run(self, status: str) -> Dict[str, Any]:
         """Finalize the run and return results."""
+        from orchestrator.cost_controller import get_cost_controller
         self.run.status = status
         self.run.completed_at = datetime.now()
 

@@ -16,7 +16,6 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from swarms.base_swarm import BaseSwarm
-from orchestrator.cost_controller import get_cost_controller
 from agents import (
     DiscoveryAgent,
     DiscoveryInput,
@@ -406,6 +405,7 @@ class GreyfieldSwarm(BaseSwarm):
 
     def _finalize_run(self, status: str) -> Dict[str, Any]:
         """Finalize the run and return results."""
+        from orchestrator.cost_controller import get_cost_controller
         self.run.status = status
         self.run.completed_at = datetime.now()
 

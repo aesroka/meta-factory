@@ -85,7 +85,12 @@ Produce a complete LegacyAnalysisResult with:
 5. Executive summary
 """
 
-    def __init__(self, librarian: Optional[Librarian] = None, model: Optional[str] = None):
+    def __init__(
+        self,
+        librarian: Optional[Librarian] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+    ):
         """Initialize the Legacy Agent."""
         super().__init__(
             role="legacy",
@@ -93,6 +98,7 @@ Produce a complete LegacyAnalysisResult with:
             output_schema=LegacyAnalysisResult,
             librarian=librarian,
             model=model,
+            provider=provider,
         )
 
     def get_task_description(self) -> str:

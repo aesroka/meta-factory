@@ -9,7 +9,6 @@ from typing import Optional, Any, Dict
 from datetime import datetime
 
 from swarms.base_swarm import BaseSwarm
-from orchestrator.cost_controller import get_cost_controller
 from agents import (
     LegacyAgent,
     LegacyInput,
@@ -308,6 +307,7 @@ class BrownfieldSwarm(BaseSwarm):
 
     def _finalize_run(self, status: str) -> Dict[str, Any]:
         """Finalize the run and return results."""
+        from orchestrator.cost_controller import get_cost_controller
         self.run.status = status
         self.run.completed_at = datetime.now()
 

@@ -10,7 +10,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from swarms.base_swarm import BaseSwarm
-from orchestrator.cost_controller import get_cost_controller
 from librarian import Librarian
 from agents import MinerAgent, MINER_RAG_QUERIES
 from contracts import MinerInput, ProjectDossier, DossierReconciliation
@@ -211,6 +210,7 @@ class IngestionSwarm(BaseSwarm):
 
     def _finalize_run(self, status: str) -> Dict[str, Any]:
         """Finalize the run and return results."""
+        from orchestrator.cost_controller import get_cost_controller
         self.run.status = status
         self.run.completed_at = datetime.now()
 
